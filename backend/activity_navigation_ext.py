@@ -44,8 +44,6 @@ def _date_wise_mix(rows: list[dict[str, Any]], limit: int) -> list[dict[str, Any
             category = row["kind"] if row.get("kind") in {"sale", "purchase"} else "other"
             categories[category].append(row)
 
-        # A sale and a purchase on the same date are shown next to each other,
-        # instead of one complete imported block appearing before the other.
         order = ("sale", "purchase", "other")
         while any(categories[key] for key in order) and len(result) < limit:
             for key in order:
@@ -56,34 +54,55 @@ def _date_wise_mix(rows: list[dict[str, Any]], limit: int) -> list[dict[str, Any
     return result
 
 
+def _sales_page(conn: Any, business_id: int, limit: int, offset: int) -> list[dict[str, Any]]:
+    return [dict(row) for row in conn.execute(
+        """
+        SELECT id,invoice_no AS ref,party_name AS title,invoice_date AS entry_date,
+               total AS amount,due,'sale' AS kind,
+               CASE WHEN due>0 THEN 'unpaid' ELSE 'completed' END AS status,created_at
+        FROM sales WHERE business_id=?
+        ORDER BY invoice_date DESC,created_at DESC,id DESC LIMIT ? OFFSET ?
+        """,
+        (business_id, limit, offset),
+    ).fetchall()]
+
+
+def _purchases_page(conn: Any, business_id: int, limit: int, offset: int) -> list[dict[str, Any]]:
+    return [dict(row) for row in conn.execute(
+        """
+        SELECT id,invoice_no AS ref,party_name AS title,invoice_date AS entry_date,
+               total AS amount,due,'purchase' AS kind,
+               CASE WHEN due>0 THEN 'unpaid' ELSE 'completed' END AS status,created_at
+        FROM purchases WHERE business_id=?
+        ORDER BY invoice_date DESC,created_at DESC,id DESC LIMIT ? OFFSET ?
+        """,
+        (business_id, limit, offset),
+    ).fetchall()]
+
+
 @app.get("/api/activity")
 def mixed_activity(
-    limit: int = Query(default=50, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0, le=200000),
+    kind: str | None = Query(default=None),
     user: dict[str, Any] = Depends(current_user),
 ) -> list[dict[str, Any]]:
     bid = user["business_id"]
-    fetch_limit = min(500, max(limit * 2, 100))
+    selected_kind = str(kind or "").strip().lower()
+
     with db() as conn:
-        sales = [dict(row) for row in conn.execute(
-            """
-            SELECT id,invoice_no AS ref,party_name AS title,invoice_date AS entry_date,
-                   total AS amount,due,'sale' AS kind,
-                   CASE WHEN due>0 THEN 'unpaid' ELSE 'completed' END AS status,created_at
-            FROM sales WHERE business_id=?
-            ORDER BY invoice_date DESC,created_at DESC,id DESC LIMIT ?
-            """,
-            (bid, fetch_limit),
-        ).fetchall()]
-        purchases = [dict(row) for row in conn.execute(
-            """
-            SELECT id,invoice_no AS ref,party_name AS title,invoice_date AS entry_date,
-                   total AS amount,due,'purchase' AS kind,
-                   CASE WHEN due>0 THEN 'unpaid' ELSE 'completed' END AS status,created_at
-            FROM purchases WHERE business_id=?
-            ORDER BY invoice_date DESC,created_at DESC,id DESC LIMIT ?
-            """,
-            (bid, fetch_limit),
-        ).fetchall()]
+        # Sale and Purchase menu pages use their own query and pagination.
+        # This prevents a large imported block in one category from hiding
+        # older records in the other category.
+        if selected_kind == "sale":
+            return _sales_page(conn, bid, limit, offset)
+        if selected_kind == "purchase":
+            return _purchases_page(conn, bid, limit, offset)
+
+        wanted = offset + limit
+        fetch_limit = min(5000, max(wanted * 2, 200))
+        sales = _sales_page(conn, bid, fetch_limit, 0)
+        purchases = _purchases_page(conn, bid, fetch_limit, 0)
         entries = [dict(row) for row in conn.execute(
             """
             SELECT id,title AS ref,COALESCE(NULLIF(party_name,''),title) AS title,
@@ -111,11 +130,11 @@ def mixed_activity(
             """,
             (bid, fetch_limit),
         ).fetchall()]
-    return _date_wise_mix(sales + purchases + entries + documents + returns, limit)
+
+    mixed = _date_wise_mix(sales + purchases + entries + documents + returns, wanted)
+    return mixed[offset:wanted]
 
 
-# This extension is loaded after settings_ext. It serves the root page with
-# both the existing settings bundle and the new navigation/timeline bundle.
 @app.middleware("http")
 async def inject_activity_navigation_assets(request, call_next):
     if request.method == "GET" and request.url.path == "/":
@@ -127,7 +146,7 @@ async def inject_activity_navigation_assets(request, call_next):
         html = html.replace(
             "</body>",
             '<script src="/settings-v2.js?v=042"></script>'
-            '<script src="/activity-navigation.js?v=043"></script></body>',
+            '<script src="/activity-navigation.js?v=046"></script></body>',
         )
         return HTMLResponse(
             html,
@@ -139,7 +158,6 @@ async def inject_activity_navigation_assets(request, call_next):
     return await call_next(request)
 
 
-# Newly registered endpoint must stay before the SPA fallback route.
 activity_routes = [
     route for route in app.router.routes
     if getattr(route, "path", None) == "/api/activity"
