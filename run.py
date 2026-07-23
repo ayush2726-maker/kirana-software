@@ -11,6 +11,8 @@ import backend.import_fix_ext  # noqa: F401
 import backend.sale_import_ext  # noqa: F401
 # Exact parser for the uploaded Party/Sale/Purchase reports, including blank purchase invoice grouping.
 import backend.vyapar_exact_ext  # noqa: F401
+# Shows sale/purchase/other entries in a date-wise mixed timeline and fixes menu navigation.
+import backend.activity_navigation_ext  # noqa: F401
 
 # The barcode/theme extension is temporarily disabled because its injected
 # browser bundle caused a blank screen on some Android Chrome/WebView builds.
