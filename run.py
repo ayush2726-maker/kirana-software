@@ -17,6 +17,8 @@ import backend.activity_navigation_ext  # noqa: F401
 import backend.sale_workflow_ext  # noqa: F401
 # Always exposes a strict manual cleanup for old SaleReport item-wise invoice imports.
 import backend.manual_sale_cleanup_ext  # noqa: F401
+# Vyapar-style Payment In/Out with party pending bills and invoice-wise allocation.
+import backend.payment_link_ext  # noqa: F401
 
 # The barcode/theme extension is temporarily disabled because its injected
 # browser bundle caused a blank screen on some Android Chrome/WebView builds.
