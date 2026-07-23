@@ -78,7 +78,7 @@ async def inject_manual_cleanup_assets(request, call_next):
             "</body>",
             '<script src="/settings-v2.js?v=042"></script>'
             '<script src="/import-fix.js?v=044"></script>'
-            '<script src="/activity-navigation.js?v=043"></script>'
+            '<script src="/activity-navigation.js?v=046"></script>'
             '<script src="/sale-item-picker.js?v=044"></script>'
             '<script src="/manual-sale-cleanup.js?v=045"></script></body>',
         )
