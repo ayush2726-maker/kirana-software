@@ -56,7 +56,99 @@ function activityLabel(k){return ({sale:'SALE',purchase:'PURCHASE',expense:'EXPE
 function statusClass(k){return k==='purchase'?'purchase':(k==='expense'||k==='cash_out'?'expense':(['sale','cash_in'].includes(k)?'':'document'))}
 function renderActivity(){const q=($('#activity-search')?.value||'').toLowerCase();const rows=state.activity.filter(x=>`${x.title} ${x.ref} ${x.kind}`.toLowerCase().includes(q));$('#activity-list').innerHTML=rows.map(r=>`<article class="transaction-card" data-activity-kind="${r.kind}" data-activity-id="${r.id}"><div class="transaction-top"><div><h3>${esc(r.title||r.ref||activityLabel(r.kind))}</h3><span class="status-pill ${statusClass(r.kind)}">${activityLabel(r.kind)}${num(r.due)>0?' : UNPAID':''}</span></div><time>${niceDate(r.entry_date)}<br><small>${esc(r.ref||'')}</small></time></div><div class="transaction-values"><div><small>Total</small><strong>${money(r.amount)}</strong></div><div><small>${num(r.due)>0?'Balance':'Status'}</small><strong class="${num(r.due)>0?'negative':''}">${num(r.due)>0?money(r.due):esc(r.status||'Completed')}</strong></div><div class="transaction-actions"><span>${icon('receipt')}</span><span>${icon('arrow')}</span></div></div></article>`).join('')||emptyText('Abhi koi transaction nahi hai.')}
 
-function renderItems(){if(!$('#items-cards'))return;const q=($('#item-filter').value||'').toLowerCase();const low=$('#low-stock-btn').classList.contains('active-filter');const rows=state.items.filter(i=>(!q||`${i.name} ${i.sku} ${i.barcode} ${i.category} ${i.size||''}`.toLowerCase().includes(q))&&(!low||num(i.stock)<=num(i.min_stock)));$('#items-cards').innerHTML=rows.map(i=>`<article class="item-card ${num(i.stock)<=num(i.min_stock)?'low':''}" data-edit-item="${i.id}"><div class="item-top"><div><h3>${esc(i.name)}</h3><small>${esc(i.sku||i.barcode||'No code')}${i.size?` · ${esc(i.size)}`:''}</small></div><span class="tag">${esc(i.size||i.category||i.unit)}</span></div><div class="item-values"><div><small>Sale Price</small><strong>${money(i.sale_price)}</strong></div><div><small>Purchase Price</small><strong>${money(i.purchase_price)}</strong></div><div><small>In Stock</small><strong class="${num(i.stock)<=num(i.min_stock)?'negative':'positive'}">${i.stock} ${esc(i.unit)}</strong></div></div></article>`).join('')||emptyText('No items found')}
+function renderItems(){
+  if(!$('#items-cards'))return;
+
+  const q=($('#item-filter').value||'').trim().toLowerCase();
+  const low=$('#low-stock-btn').classList.contains('active-filter');
+
+  const rows=state.items.filter(i=>{
+    const searchable=`${i.name} ${i.sku} ${i.barcode} ${i.category} ${i.size||''} ${i.unit||''}`.toLowerCase();
+    return (!q||searchable.includes(q))&&(!low||num(i.stock)<=num(i.min_stock));
+  });
+
+  const groups=new Map();
+
+  rows.forEach(item=>{
+    const key=String(item.name||'').trim().toLowerCase();
+
+    if(!groups.has(key)){
+      groups.set(key,{
+        name:item.name,
+        variants:[]
+      });
+    }
+
+    groups.get(key).variants.push(item);
+  });
+
+  const grouped=[...groups.values()].sort((a,b)=>
+    String(a.name).localeCompare(String(b.name),'en',{sensitivity:'base'})
+  );
+
+  $('#items-cards').innerHTML=grouped.map(group=>{
+    const variants=group.variants.sort((a,b)=>{
+      const av=parseFloat(a.size);
+      const bv=parseFloat(b.size);
+
+      if(Number.isFinite(av)&&Number.isFinite(bv))return av-bv;
+      return String(a.size||'').localeCompare(String(b.size||''));
+    });
+
+    const allLow=variants.every(i=>num(i.stock)<=num(i.min_stock));
+    const variantText=variants.length===1?'1 variant':`${variants.length} variants`;
+
+    return `
+      <article class="item-card variant-group ${allLow?'low':''}">
+        <div class="item-top">
+          <div>
+            <h3>${esc(group.name)}</h3>
+            <small>${variantText}</small>
+          </div>
+
+          <span class="tag">
+            ${variants.length>1?'Sizes':esc(variants[0].size||variants[0].unit||'Default')}
+          </span>
+        </div>
+
+        <div class="variant-list">
+          ${variants.map(i=>`
+            <button
+              type="button"
+              class="variant-row ${num(i.stock)<=num(i.min_stock)?'variant-low':''}"
+              data-edit-item="${i.id}"
+            >
+              <div class="variant-heading">
+                <strong>${esc(i.size||'Default')}</strong>
+                <small>${esc(i.unit||'')}</small>
+              </div>
+
+              <div class="variant-prices">
+                <span>
+                  <small>Sale</small>
+                  <b>${money(i.sale_price)}</b>
+                </span>
+
+                <span>
+                  <small>Purchase</small>
+                  <b>${money(i.purchase_price)}</b>
+                </span>
+
+                <span>
+                  <small>Stock</small>
+                  <b class="${num(i.stock)<=num(i.min_stock)?'negative':'positive'}">
+                    ${i.stock} ${esc(i.unit||'')}
+                  </b>
+                </span>
+              </div>
+            </button>
+          `).join('')}
+        </div>
+      </article>
+    `;
+  }).join('')||emptyText('No items found');
+}
+
 function openItem(item=null){const f=$('#item-form');f.reset();f.elements.id.value=item?.id||'';$('#item-modal-title').textContent=item?'Edit Item':'Add Item';if(item)Object.keys(item).forEach(k=>{if(f.elements[k])f.elements[k].value=item[k]??''});$('#item-dialog').showModal()}
 async function saveItem(form){const data=Object.fromEntries(new FormData(form));const id=data.id;delete data.id;['gst_rate','purchase_price','sale_price','mrp','stock','min_stock'].forEach(k=>data[k]=num(data[k]));await api(id?`/api/items/${id}`:'/api/items',{method:id?'PUT':'POST',body:data});$('#item-dialog').close();toast(id?'Item updated':'Item added');await refreshMasterData();renderItems()}
 
