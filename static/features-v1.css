@@ -1,0 +1,97 @@
+/* Kirana Software v0.4.5 — barcode, A5 print and feature activation */
+.feature-hidden{display:none!important}
+
+/* App themes */
+html[data-kirana-theme="modern"]{--blue:#0b7bc1;--blue2:#0a6aa7;--blue-soft:#e8f5ff;--bg:#edf7ff;--card:#fff;--line:#dce7ef;--shadow:0 3px 12px rgba(31,79,110,.16)}
+html[data-kirana-theme="compact"]{--radius:11px;--shadow:0 2px 7px rgba(31,79,110,.12)}
+html[data-kirana-theme="compact"] .brand-header{height:62px}
+html[data-kirana-theme="compact"] .app-main{padding-top:14px}
+html[data-kirana-theme="compact"] .card{padding:13px;margin-bottom:10px;border-radius:11px}
+html[data-kirana-theme="compact"] .transaction-card,html[data-kirana-theme="compact"] .item-card,html[data-kirana-theme="compact"] .party-card{padding:12px;border-radius:11px}
+html[data-kirana-theme="compact"] .quick-icon{width:56px;height:47px}
+html[data-kirana-theme="compact"] .billing-line-card{padding:11px}
+html[data-kirana-theme="classic"]{--blue:#167c3b;--blue2:#126431;--blue-soft:#edf8ef;--bg:#f4f5ef;--line:#d9ded2;--shadow:0 2px 8px rgba(40,68,39,.13)}
+html[data-kirana-theme="classic"] .brand-header{border-bottom:3px double var(--line)}
+html[data-kirana-theme="classic"] .card,html[data-kirana-theme="classic"] .transaction-card,html[data-kirana-theme="classic"] .item-card{border-radius:7px}
+html[data-kirana-theme="midnight"]{--blue:#7ab8ff;--blue2:#9bcaff;--blue-soft:#1d334a;--bg:#0f1722;--card:#172331;--line:#2b3b4d;--ink:#eef5fb;--muted:#a8b6c5;--shadow:0 5px 18px rgba(0,0,0,.3)}
+html[data-kirana-theme="midnight"] body,html[data-kirana-theme="midnight"] .app-shell{background:var(--bg);color:var(--ink)}
+html[data-kirana-theme="midnight"] .brand-header,html[data-kirana-theme="midnight"] .bottom-nav,html[data-kirana-theme="midnight"] .bottom-nav button,html[data-kirana-theme="midnight"] .card,html[data-kirana-theme="midnight"] .transaction-card,html[data-kirana-theme="midnight"] .item-card,html[data-kirana-theme="midnight"] .party-card,html[data-kirana-theme="midnight"] .menu-card>button,html[data-kirana-theme="midnight"] .search-toolbar,html[data-kirana-theme="midnight"] .billing-document-card,html[data-kirana-theme="midnight"] .sale-document-card,html[data-kirana-theme="midnight"] .billing-summary-panel,html[data-kirana-theme="midnight"] .sale-summary-panel{background:var(--card);color:var(--ink);border-color:var(--line)}
+html[data-kirana-theme="midnight"] input,html[data-kirana-theme="midnight"] select,html[data-kirana-theme="midnight"] textarea{background:#101b27;color:var(--ink);border-color:var(--line)}
+html[data-kirana-theme="midnight"] .simple-row,html[data-kirana-theme="midnight"] .menu-card>button{border-color:var(--line)}
+html[data-kirana-theme="midnight"] .invoice-sheet{background:#fff;color:#111}
+html[data-kirana-accent="green"]{--blue:#168a50;--blue2:#11713f;--blue-soft:#e9f8f0}
+html[data-kirana-accent="purple"]{--blue:#7557c7;--blue2:#5e42ad;--blue-soft:#f0ebff}
+html[data-kirana-accent="coral"]{--blue:#ef3152;--blue2:#cf2341;--blue-soft:#fff0f3}
+
+/* Barcode controls */
+.item-barcode-actions{display:flex;gap:7px;margin-top:7px}
+.item-barcode-actions .btn{flex:1;padding:8px 10px;font-size:12px}
+.barcode-center-button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:-2px 0 13px;background:#fff;color:var(--blue);border:1px solid var(--blue);box-shadow:var(--shadow)}
+.barcode-center-button span{font-size:22px;line-height:1}
+.feature-scan-button{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;border-radius:10px;background:var(--blue-soft);color:var(--blue);font-size:25px;display:grid;place-items:center;z-index:4}
+.sale-search-wrap .feature-scan-button,.billing-search-wrap .feature-scan-button{right:5px}
+.sale-search-wrap input,.billing-search-wrap input{padding-right:48px!important}
+
+/* Dialogs */
+.feature-dialog{width:min(94vw,640px);max-height:92vh;border:0;border-radius:18px;padding:0;background:#f4f9fd;color:var(--ink);box-shadow:0 24px 80px rgba(0,0,0,.28)}
+.feature-dialog::backdrop{background:rgba(10,23,34,.58)}
+.feature-dialog>header{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--blue-soft);border-bottom:1px solid var(--line);padding:15px 18px}
+.feature-dialog>header h2{margin:0;font-size:20px}
+.feature-dialog>header small{display:block;color:var(--muted);margin-top:3px}
+.feature-dialog>header button{border:0;background:transparent;color:var(--ink);font-size:30px;line-height:1}
+.feature-dialog-body{padding:16px;display:grid;gap:13px;overflow:auto}
+.feature-dialog-body>label,.feature-grid label{display:grid;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
+.feature-dialog>footer{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:10px;background:#fff;border-top:1px solid var(--line);padding:13px 16px}
+.feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.feature-button-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.feature-checks{display:flex;flex-wrap:wrap;gap:14px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px}
+.feature-checks.stacked{display:grid}
+.feature-checks label{display:flex;align-items:center;gap:8px;font-size:13px}
+.feature-checks input{width:18px;height:18px}
+.label-item-preview{display:grid;grid-template-columns:1fr minmax(150px,230px);align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px}
+.label-item-preview>div:first-child{display:grid;gap:3px}
+.label-item-preview small{color:var(--muted)}
+.label-item-preview strong{font-size:20px;color:var(--blue)}
+.mini-barcode{height:65px;display:grid;place-items:center;overflow:hidden}
+.mini-barcode .barcode-svg{width:100%;height:100%}
+.mini-barcode span{color:var(--muted);font-size:12px}
+
+/* Camera scanner */
+.barcode-scan-dialog{width:min(94vw,520px);background:#101820;color:#fff}
+.barcode-scan-dialog>header{background:#172838;border-color:#2a3a48;color:#fff}
+.scanner-stage{position:relative;min-height:390px;background:#000;overflow:hidden}
+.scanner-stage video{width:100%;height:390px;object-fit:cover;display:block}
+.scanner-frame{position:absolute;left:10%;right:10%;top:34%;height:32%;border:3px solid #33d69f;border-radius:15px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+#scanner-status{position:absolute;left:0;right:0;bottom:15px;text-align:center;margin:0;font-weight:700;text-shadow:0 2px 5px #000}
+
+/* Live sale profit */
+.sale-profit-preview{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0;padding:11px 13px;border-radius:10px;background:linear-gradient(135deg,#e9fbf4,#f4fffb);border:1px solid #bfead7}
+.sale-profit-preview span{color:#47705f;font-weight:700}
+.sale-profit-preview strong{font-size:18px}
+
+/* Invoice preview and themes */
+.invoice-sheet.print-a5{width:148mm;max-width:100%;min-height:210mm}
+.invoice-sheet.invoice-theme-modern{border-top:5px solid var(--invoice-accent,#0b7bc1)}
+.invoice-sheet.invoice-theme-classic .invoice-top{border:3px double #333;padding:10px}
+.invoice-sheet.invoice-theme-minimal{box-shadow:none;border:1px solid #e1e1e1}
+.invoice-sheet.invoice-theme-minimal .invoice-table th,.invoice-sheet.invoice-theme-minimal .invoice-table td{border-left:0;border-right:0}
+.invoice-sheet.invoice-accent-blue{--invoice-accent:#0b7bc1}
+.invoice-sheet.invoice-accent-green{--invoice-accent:#168a50}
+.invoice-sheet.invoice-accent-purple{--invoice-accent:#7557c7}
+.invoice-sheet.invoice-accent-coral{--invoice-accent:#ef3152}
+.invoice-extra-block{margin-top:18px;padding-top:10px;border-top:1px solid #ccd3d8;font-size:12px}
+.invoice-extra-block p{margin:5px 0}
+.invoice-grand-total{font-size:1.12em;font-weight:800}
+.invoice-barcode-cell{min-width:85px}
+.invoice-barcode-cell .barcode-svg{width:80px;height:34px;display:block}
+
+@media(max-width:520px){
+  .feature-dialog{width:100%;height:100vh;max-height:none;border-radius:0}
+  .feature-grid,.feature-button-row{grid-template-columns:1fr}
+  .label-item-preview{grid-template-columns:1fr}
+  .mini-barcode{height:76px}
+  .feature-dialog>footer{justify-content:stretch}
+  .feature-dialog>footer .btn{flex:1}
+  .invoice-actions{gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .invoice-actions select{max-width:115px}
+}
