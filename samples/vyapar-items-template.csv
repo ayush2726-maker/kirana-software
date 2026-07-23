@@ -1,0 +1,3 @@
+Item Name,Item Code,Barcode,Category,Unit,Size,HSN,Tax Rate,Purchase Price,Sale Price,MRP,Current Stock,Min Stock
+Sugar 1kg,SUGAR1,890000000001,Grocery,packet,1 kg,1701,5,42,50,55,25,5
+Tea 250g,TEA250,890000000002,Beverages,packet,250 gm,0902,5,110,140,150,18,4

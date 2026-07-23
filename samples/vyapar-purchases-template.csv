@@ -1,0 +1,3 @@
+Invoice Number,Invoice Date,Party Name,Item Name,Item Code,Quantity,Rate,Tax Rate,Discount,Paid Amount,Payment Mode
+SUP-1001,23/07/2026,Wholesale Mart,Sugar 1kg,SUGAR1,20,42,5,0,500,Bank
+SUP-1001,23/07/2026,Wholesale Mart,Tea 250g,TEA250,10,110,5,0,500,Bank

@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b7bc1" />
+  <meta name="description" content="Kirana Software – billing, stock, khata and business management" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css?v=040" />
+  <title>Kirana Software</title>
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+
+  <section id="auth-screen" class="auth-screen hidden">
+    <div class="auth-brand">
+      <div class="brand-logo">K</div>
+      <div><h1>Kirana Software</h1><p>Billing, Stock aur Khata — Sab Ek Jagah</p></div>
+    </div>
+    <div class="auth-card">
+      <div id="setup-box" class="hidden">
+        <span class="eyebrow">FIRST TIME SETUP</span>
+        <h2>Apni dukaan shuru karein</h2>
+        <form id="setup-form" class="form-grid one">
+          <label>Dukaan ka naam<input name="business_name" required placeholder="Kishore Traders" /></label>
+          <label>Owner name<input name="owner_name" placeholder="Ayush Agrawal" /></label>
+          <label>Mobile<input name="phone" inputmode="tel" /></label>
+          <label>GSTIN<input name="gstin" /></label>
+          <label>Address<textarea name="address" rows="2"></textarea></label>
+          <label>Login username<input name="username" value="admin" required /></label>
+          <label>PIN / Password<input name="password" type="password" minlength="4" required placeholder="Minimum 4 digits" /></label>
+          <button class="btn primary wide" type="submit">Create Kirana Software</button>
+        </form>
+      </div>
+      <div id="login-box" class="hidden">
+        <span class="eyebrow">SECURE LOGIN</span><h2>Welcome back</h2>
+        <form id="login-form" class="form-grid one">
+          <label>Username<input name="username" value="admin" required /></label>
+          <label>PIN / Password<input name="password" type="password" required /></label>
+          <button class="btn primary wide" type="submit">Login</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <div id="app-shell" class="app-shell hidden">
+    <header class="brand-header">
+      <button id="desktop-menu-btn" class="icon-button desktop-menu" aria-label="Menu"><span data-icon="menu"></span></button>
+      <div class="mini-logo">K</div>
+      <div class="shop-title"><strong id="shop-name">Kirana Software</strong><small id="header-subtitle">Business made simple</small></div>
+      <div class="header-actions">
+        <button id="install-btn" class="icon-button hidden" title="Install"><span data-icon="download"></span></button>
+        <button class="icon-button" data-go="settings" title="Settings"><span data-icon="settings"></span></button>
+        <button class="avatar-button" id="profile-btn">A</button>
+      </div>
+    </header>
+
+    <aside id="side-drawer" class="side-drawer">
+      <div class="drawer-brand"><div class="brand-logo small">K</div><div><strong>Kirana Software</strong><small id="drawer-shop">My Shop</small></div></div>
+      <nav class="drawer-nav">
+        <button data-go="home"><span data-icon="home"></span>Home</button>
+        <button data-go="dashboard"><span data-icon="chart"></span>Dashboard</button>
+        <button data-go="items"><span data-icon="box"></span>Items & Stock</button>
+        <button data-go="parties"><span data-icon="users"></span>Parties & Khata</button>
+        <button data-go="transactions"><span data-icon="receipt"></span>Transactions</button>
+        <button data-go="reports"><span data-icon="report"></span>Reports</button>
+        <button data-go="import"><span data-icon="sync"></span>Vyapar Import</button>
+        <button data-go="settings"><span data-icon="settings"></span>Settings</button>
+      </nav>
+      <div class="sync-box"><span id="sync-dot" class="sync-dot"></span><div><strong id="sync-text">Online & synced</strong><small id="queue-text">No pending changes</small></div></div>
+      <button id="logout-btn" class="btn secondary wide">Logout</button>
+    </aside>
+    <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+
+    <main class="app-main">
+      <section id="page-home" class="page active">
+        <div class="segment-control"><button class="active">Transaction Details</button><button data-go="parties">Party Details</button></div>
+        <article class="card quick-links-card">
+          <div class="section-title"><h2>Quick Links</h2></div>
+          <div class="quick-links">
+            <button id="open-txn-launcher"><span class="quick-icon coral" data-icon="add-receipt"></span><b>Add Txn</b></button>
+            <button data-go="reports"><span class="quick-icon blue" data-icon="report"></span><b>Sale Report</b></button>
+            <button data-go="settings"><span class="quick-icon blue" data-icon="settings"></span><b>Txn Settings</b></button>
+            <button data-go="menu"><span class="quick-icon blue" data-icon="arrow"></span><b>Show All</b></button>
+          </div>
+        </article>
+        <div class="search-toolbar card"><span data-icon="search"></span><input id="activity-search" placeholder="Search for a transaction" /><button class="icon-button"><span data-icon="filter"></span></button></div>
+        <div id="activity-list" class="card-list"></div>
+        <button class="floating-action" data-go="sale"><span data-icon="rupee"></span> Add New Sale</button>
+      </section>
+
+      <section id="page-dashboard" class="page">
+        <div class="money-grid">
+          <article class="money-card positive-card"><small>You’ll Get</small><strong id="dash-receivable">₹0.00</strong></article>
+          <article class="money-card negative-card"><small>You’ll Give</small><strong id="dash-payable">₹0.00</strong></article>
+        </div>
+        <article class="card chart-card">
+          <div class="section-title"><div><h2>Sale Overview</h2><p id="chart-period">Last 6 months</p></div><strong id="dash-month-sale">₹0.00</strong></div>
+          <div id="sales-chart" class="sales-chart"></div>
+        </article>
+        <div class="mini-stat-grid">
+          <article class="card mini-stat"><small>Purchases this month</small><strong id="dash-purchases">₹0.00</strong></article>
+          <article class="card mini-stat"><small>Expenses this month</small><strong id="dash-expenses">₹0.00</strong></article>
+        </div>
+        <article class="card report-shortcuts"><div class="section-title"><h2>Most Used Reports</h2><button data-go="reports">See All</button></div><div class="icon-shortcuts"><button data-go="reports"><span data-icon="sale"></span>Sales</button><button data-go="reports"><span data-icon="cart"></span>Purchases</button><button data-go="parties"><span data-icon="ledger"></span>Bal. Sheet</button><button data-go="reports"><span data-icon="profit"></span>Profit & Loss</button></div></article>
+        <article class="card dashboard-block"><div class="section-title"><h2>Cash & Bank</h2><button data-register="accounts">See All</button></div><div class="money-grid inset"><div><small>Bank Balance</small><strong class="positive" id="dash-bank">₹0.00</strong></div><div><small>Cash In-Hand</small><strong id="dash-cash">₹0.00</strong></div></div><div id="account-preview" class="simple-list"></div></article>
+        <article class="card dashboard-block"><div class="section-title"><h2>Inventory</h2><button data-go="items">See All</button></div><div class="money-grid inset"><div><small>Stock Value</small><strong class="positive" id="dash-stock-value">₹0.00</strong></div><div><small>No. of Items</small><strong id="dash-item-count">0</strong></div></div><div id="low-stock-preview" class="simple-list"></div></article>
+        <article class="card dashboard-block"><div class="section-title"><h2>Open Transactions</h2></div><div class="money-grid inset"><div><small>Open Documents</small><strong id="dash-open-count">0</strong></div><div><small>Order Amount</small><strong class="positive" id="dash-open-amount">₹0.00</strong></div></div></article>
+      </section>
+
+      <section id="page-items" class="page">
+        <article class="card quick-links-card"><div class="section-title"><h2>Quick Links</h2></div><div class="quick-links"><button data-go="menu"><span class="quick-icon blue" data-icon="store"></span><b>Categories</b></button><button data-go="reports"><span class="quick-icon blue" data-icon="box"></span><b>Stock Summary</b></button><button data-go="settings"><span class="quick-icon blue" data-icon="settings"></span><b>Item Settings</b></button><button data-go="menu"><span class="quick-icon blue" data-icon="arrow"></span><b>Show All</b></button></div></article>
+        <div class="search-toolbar card"><span data-icon="search"></span><input id="item-filter" placeholder="Search for an item or code" /><button id="low-stock-btn" class="icon-button"><span data-icon="filter"></span></button><button class="icon-button" data-action="new-item"><span data-icon="dots"></span></button></div>
+        <div id="items-cards" class="card-list item-card-list"></div>
+        <button class="floating-action" data-action="new-item"><span data-icon="box"></span> Add New Item</button>
+      </section>
+
+      <section id="page-menu" class="page">
+        <article class="card menu-card">
+          <div class="menu-heading">My Business</div>
+          <button data-menu-launch="sales"><span data-icon="sale"></span><b>Sale</b><i data-icon="chevron"></i></button>
+          <button data-menu-launch="purchases"><span data-icon="cart"></span><b>Purchase</b><i data-icon="chevron"></i></button>
+          <button data-entry-type="expense"><span data-icon="wallet"></span><b>Expenses</b><i data-icon="chevron"></i></button>
+          <button data-register="documents"><span data-icon="warehouse"></span><b>Godown & Documents</b><i data-icon="chevron"></i></button>
+          <button data-go="reports"><span data-icon="report"></span><b>Reports</b><i data-icon="chevron"></i></button>
+        </article>
+        <article class="card menu-card">
+          <div class="menu-heading">Cash, Bank & Assets</div>
+          <button data-register="accounts"><span data-icon="bank"></span><b>Bank Accounts</b><i data-icon="chevron"></i></button>
+          <button data-register="accounts"><span data-icon="cash"></span><b>Cash In-Hand</b><i data-icon="chevron"></i></button>
+          <button data-register="cheques"><span data-icon="card"></span><b>Cheques</b><i data-icon="chevron"></i></button>
+          <button data-register="loans"><span data-icon="percent"></span><b>Loan Accounts</b><i data-icon="chevron"></i></button>
+          <button data-register="assets"><span data-icon="building"></span><b>Fixed Assets</b><i data-icon="chevron"></i></button>
+        </article>
+        <article class="card menu-card">
+          <div class="menu-heading">Important Utilities</div>
+          <button data-go="import"><span data-icon="sync"></span><b>Sync, Share & Vyapar Import</b><span class="on-pill">ON</span><i data-icon="chevron"></i></button>
+          <button data-go="settings"><span data-icon="companies"></span><b>Manage Business</b><i data-icon="chevron"></i></button>
+          <button data-go="settings"><span data-icon="backup"></span><b>Backup / Restore</b><i data-icon="chevron"></i></button>
+          <button data-go="settings"><span data-icon="settings"></span><b>Settings</b><i data-icon="chevron"></i></button>
+        </article>
+        <article class="card version-card"><span>App Version</span><strong>0.4.0 Purchase & Returns</strong></article>
+      </section>
+
+      <section id="page-sale" class="page billing-page sale-workspace">
+        <header class="sale-page-head">
+          <button class="icon-button" data-go="home" aria-label="Back"><span data-icon="back"></span></button>
+          <h1>Sale</h1>
+          <div class="sale-payment-switch" role="group" aria-label="Sale type">
+            <button id="sale-credit-toggle" class="active" type="button">Credit</button>
+            <button id="sale-cash-toggle" type="button">Cash</button>
+          </div>
+          <button class="icon-button" data-go="settings" aria-label="Sale settings"><span data-icon="settings"></span></button>
+        </header>
+
+        <article class="sale-document-card">
+          <div class="sale-meta-grid">
+            <div><small>Invoice No.</small><strong id="sale-invoice-no">Auto</strong></div>
+            <label><small>Date</small><input id="sale-date" type="date" /></label>
+            <div><small>Time</small><strong id="sale-time">--:--</strong></div>
+          </div>
+          <div class="sale-business-row"><span>Firm</span><strong id="sale-firm-name">Kirana Software</strong></div>
+          <div class="sale-business-row"><span>Godown</span><strong>Main Godown</strong></div>
+          <div class="sale-terms-grid">
+            <label><small>Payment Terms</small><select id="sale-terms"><option value="0">Due Today</option><option value="7" selected>Net 7</option><option value="15">Net 15</option><option value="30">Net 30</option></select></label>
+            <label><small>Due On</small><input id="sale-due-date" type="date" /></label>
+          </div>
+          <div class="sale-party-panel">
+            <label><small>Customer</small><select id="sale-party"></select></label>
+            <label><small>Phone Number</small><input id="sale-phone" inputmode="tel" placeholder="Optional" /></label>
+            <div class="party-balance-line"><span>Party Balance</span><strong id="sale-party-balance">₹0.00</strong></div>
+          </div>
+          <div class="sale-add-row">
+            <div class="sale-search-wrap"><span data-icon="search"></span><input id="sale-item-search" placeholder="Search item, SKU or barcode" autocomplete="off" /><div id="sale-search-results" class="search-results hidden"></div></div>
+            <button class="btn secondary sale-add-item-btn" data-action="new-item"><span data-icon="box"></span> New</button>
+          </div>
+          <div class="billed-items-head"><span>Billed Items</span><small id="sale-item-count">0 items</small></div>
+          <div id="sale-cart" class="bill-lines sale-bill-lines"></div>
+          <div id="sale-empty" class="sale-empty"><span data-icon="receipt"></span><b>No items added</b><small>Search or scan an item to start billing</small></div>
+        </article>
+
+        <article class="sale-summary-panel">
+          <div class="sale-summary-head"><div><small>Bill Total</small><strong id="sale-total">₹0.00</strong></div><span id="sale-item-count-copy">0 items</span></div>
+          <div class="sale-summary-grid">
+            <div><span>Subtotal</span><strong id="sale-subtotal">₹0.00</strong></div>
+            <div><span>Tax</span><strong id="sale-tax">₹0.00</strong></div>
+            <label><span>Discount</span><input id="sale-discount" type="number" min="0" value="0" /></label>
+            <label><span>Received</span><input id="sale-paid" type="number" min="0" value="0" /></label>
+          </div>
+          <div class="sale-due-strip"><span>Balance Due</span><strong id="sale-due">₹0.00</strong></div>
+          <details class="sale-more-details">
+            <summary>Payment & additional details</summary>
+            <div class="sale-detail-grid">
+              <label>Payment Mode<select id="sale-mode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option><option value="credit" selected>Credit / Udhaar</option><option value="bank">Bank</option></select></label>
+              <label>State of Supply<input id="sale-state" placeholder="Select state" /></label>
+              <label class="full">Description / Note<textarea id="sale-note" rows="2" placeholder="Optional note"></textarea></label>
+            </div>
+          </details>
+        </article>
+
+        <div class="sale-sticky-actions">
+          <button id="hold-sale" class="sale-hold-btn" title="Hold order"><span data-icon="receipt"></span></button>
+          <button id="save-sale-new" class="sale-save-new" type="button">Save & New</button>
+          <button id="save-sale" class="sale-save" type="button">Save & Print</button>
+          <button id="clear-sale" class="sale-more-btn" type="button" title="Clear bill"><span data-icon="dots"></span></button>
+        </div>
+        <button id="restore-sale" class="btn text wide hidden">Restore held order</button>
+      </section>
+
+      <section id="page-purchase" class="page billing-page purchase-workspace">
+        <header class="billing-page-head purchase-page-head">
+          <button class="icon-button" data-go="home" aria-label="Back"><span data-icon="back"></span></button>
+          <h1>Purchase</h1>
+          <div class="billing-payment-switch purchase-payment-switch" role="group" aria-label="Purchase type">
+            <button id="purchase-credit-toggle" class="active" type="button">Credit</button>
+            <button id="purchase-cash-toggle" type="button">Cash</button>
+          </div>
+          <button class="icon-button" data-go="settings" aria-label="Purchase settings"><span data-icon="settings"></span></button>
+        </header>
+
+        <article class="billing-document-card purchase-document-card">
+          <div class="billing-meta-grid">
+            <div><small>Purchase No.</small><strong id="purchase-invoice-no">Auto</strong></div>
+            <label><small>Date</small><input id="purchase-date" type="date" /></label>
+            <div><small>Time</small><strong id="purchase-time">--:--</strong></div>
+          </div>
+          <div class="billing-business-row"><span>Firm</span><strong id="purchase-firm-name">Kirana Software</strong></div>
+          <div class="billing-business-row"><span>Godown</span><strong>Main Godown</strong></div>
+          <div class="billing-party-panel">
+            <label><small>Supplier</small><select id="purchase-party"></select></label>
+            <label><small>Phone Number</small><input id="purchase-phone" inputmode="tel" placeholder="Optional" readonly /></label>
+            <div class="party-balance-line"><span>Supplier Balance</span><strong id="purchase-party-balance">₹0.00</strong></div>
+          </div>
+          <div class="billing-add-row">
+            <div class="billing-search-wrap"><span data-icon="search"></span><input id="purchase-item-search" placeholder="Search item, SKU or barcode" autocomplete="off" /><div id="purchase-search-results" class="search-results hidden"></div></div>
+            <button class="btn secondary billing-add-item-btn" data-action="new-item"><span data-icon="box"></span> New</button>
+          </div>
+          <div class="billed-items-head purchase-items-head"><span>Purchased Items</span><small id="purchase-item-count">0 items</small></div>
+          <div id="purchase-cart" class="bill-lines purchase-bill-lines"></div>
+          <div id="purchase-empty" class="billing-empty"><span data-icon="cart"></span><b>No items added</b><small>Search an item to add stock</small></div>
+        </article>
+
+        <article class="billing-summary-panel purchase-summary-panel">
+          <div class="billing-summary-head"><div><small>Purchase Total</small><strong id="purchase-total">₹0.00</strong></div><span id="purchase-item-count-copy">0 items</span></div>
+          <div class="billing-summary-grid">
+            <div><span>Subtotal</span><strong id="purchase-subtotal">₹0.00</strong></div>
+            <div><span>Tax</span><strong id="purchase-tax">₹0.00</strong></div>
+            <label><span>Discount</span><input id="purchase-discount" type="number" min="0" value="0" /></label>
+            <label><span>Paid</span><input id="purchase-paid" type="number" min="0" value="0" /></label>
+          </div>
+          <div class="billing-due-strip purchase-due-strip"><span>Amount Payable</span><strong id="purchase-due">₹0.00</strong></div>
+          <details class="billing-more-details">
+            <summary>Payment & additional details</summary>
+            <div class="billing-detail-grid">
+              <label>Payment Mode<select id="purchase-mode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option><option value="credit" selected>Credit / Udhaar</option><option value="bank">Bank</option></select></label>
+              <label>Supplier Invoice No.<input id="purchase-reference" placeholder="Optional" /></label>
+              <label class="full">Description / Note<textarea id="purchase-note" rows="2" placeholder="Optional note"></textarea></label>
+            </div>
+          </details>
+        </article>
+
+        <div class="billing-sticky-actions purchase-sticky-actions">
+          <button id="hold-purchase" class="billing-hold-btn" title="Hold purchase"><span data-icon="receipt"></span></button>
+          <button id="save-purchase-new" class="billing-save-new" type="button">Save & New</button>
+          <button id="save-purchase" class="billing-save purchase-save" type="button">Save Purchase</button>
+          <button id="clear-purchase" class="billing-more-btn" type="button" title="Clear purchase"><span data-icon="dots"></span></button>
+        </div>
+        <button id="restore-purchase" class="btn text wide hidden">Restore held purchase</button>
+      </section>
+
+      <section id="page-return" class="page billing-page return-workspace">
+        <header class="billing-page-head return-page-head">
+          <button class="icon-button" data-go="transactions" aria-label="Back"><span data-icon="back"></span></button>
+          <h1 id="return-page-title">Sale Return</h1>
+          <div class="billing-payment-switch return-type-switch" role="group" aria-label="Return type">
+            <button id="return-sale-toggle" class="active" type="button">Sale</button>
+            <button id="return-purchase-toggle" type="button">Purchase</button>
+          </div>
+          <button class="icon-button" data-go="settings"><span data-icon="settings"></span></button>
+        </header>
+        <article class="billing-document-card return-document-card">
+          <div class="billing-meta-grid">
+            <div><small>Return No.</small><strong id="return-no">Auto</strong></div>
+            <label><small>Date</small><input id="return-date" type="date" /></label>
+            <label><small>Original Bill</small><input id="return-reference" placeholder="Invoice no." /></label>
+          </div>
+          <div class="billing-party-panel">
+            <label><small id="return-party-label">Customer</small><select id="return-party"></select></label>
+            <label><small>Phone Number</small><input id="return-phone" inputmode="tel" readonly /></label>
+            <div class="party-balance-line"><span>Party Balance</span><strong id="return-party-balance">₹0.00</strong></div>
+          </div>
+          <div class="billing-add-row">
+            <div class="billing-search-wrap"><span data-icon="search"></span><input id="return-item-search" placeholder="Search returned item" autocomplete="off" /><div id="return-search-results" class="search-results hidden"></div></div>
+            <button class="btn secondary billing-add-item-btn" data-action="new-item"><span data-icon="box"></span> New</button>
+          </div>
+          <div class="billed-items-head return-items-head"><span>Returned Items</span><small id="return-item-count">0 items</small></div>
+          <div id="return-cart" class="bill-lines return-bill-lines"></div>
+          <div id="return-empty" class="billing-empty"><span data-icon="return"></span><b>No returned items</b><small>Add items and quantity being returned</small></div>
+        </article>
+        <article class="billing-summary-panel return-summary-panel">
+          <div class="billing-summary-head"><div><small>Return Total</small><strong id="return-total">₹0.00</strong></div><span id="return-item-count-copy">0 items</span></div>
+          <div class="billing-summary-grid">
+            <div><span>Subtotal</span><strong id="return-subtotal">₹0.00</strong></div>
+            <div><span>Tax</span><strong id="return-tax">₹0.00</strong></div>
+            <label><span>Discount</span><input id="return-discount" type="number" min="0" value="0" /></label>
+            <label><span id="return-paid-label">Refund Paid</span><input id="return-paid" type="number" min="0" value="0" /></label>
+          </div>
+          <div class="billing-due-strip return-due-strip"><span id="return-due-label">Credit Adjustment</span><strong id="return-due">₹0.00</strong></div>
+          <details class="billing-more-details">
+            <summary>Refund & notes</summary>
+            <div class="billing-detail-grid">
+              <label>Settlement Mode<select id="return-mode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank</option><option value="credit">Credit Note</option></select></label>
+              <label class="full">Reason / Note<textarea id="return-note" rows="2" placeholder="Return reason"></textarea></label>
+            </div>
+          </details>
+        </article>
+        <div class="billing-sticky-actions return-sticky-actions">
+          <button id="clear-return" class="billing-hold-btn" title="Clear"><span data-icon="close"></span></button>
+          <button id="save-return-new" class="billing-save-new" type="button">Save & New</button>
+          <button id="save-return" class="billing-save return-save" type="button">Save Return</button>
+          <button class="billing-more-btn" data-go="transactions"><span data-icon="dots"></span></button>
+        </div>
+      </section>
+
+      <section id="page-parties" class="page">
+        <div class="page-heading"><div><h1>Parties & Khata</h1><p>Customer receivable aur supplier payable</p></div><button class="btn primary" data-action="new-party">+ Add Party</button></div>
+        <div class="search-toolbar card"><span data-icon="search"></span><input id="party-filter" placeholder="Search party, mobile or GSTIN" /><select id="party-type-filter"><option value="">All</option><option value="customer">Customers</option><option value="supplier">Suppliers</option></select></div>
+        <div id="parties-cards" class="card-list"></div>
+      </section>
+
+      <section id="page-transactions" class="page">
+        <div class="page-heading"><div><h1>Transactions</h1><p>Sale, purchase, payments and documents</p></div><button class="btn primary" id="open-txn-launcher-2">+ Add Txn</button></div>
+        <div class="tabs"><button data-tx-tab="all" class="active">All</button><button data-tx-tab="sale">Sales</button><button data-tx-tab="purchase">Purchases</button><button data-tx-tab="other">Other</button></div>
+        <div class="search-toolbar card"><span data-icon="search"></span><input id="tx-filter" placeholder="Search invoice or party" /></div>
+        <div id="transactions-list" class="card-list"></div>
+      </section>
+
+      <section id="page-register" class="page">
+        <div class="page-heading"><div><h1 id="register-title">Register</h1><p id="register-subtitle">Business records</p></div><button id="register-add-btn" class="btn primary">+ Add</button></div>
+        <div id="register-summary" class="money-grid"></div><div id="register-list" class="card-list"></div>
+      </section>
+
+      <section id="page-import" class="page">
+        <article class="card import-card"><span class="eyebrow">DATA MIGRATION</span><h1>Import from Vyapar</h1><p>CSV ya Excel upload karke preview aur import karein</p><form id="import-form" class="form-grid one"><label>Data type<select id="import-type"><option value="items">Items / Stock</option><option value="parties">Customers & Suppliers</option><option value="sales">Sale Invoices</option><option value="purchases">Purchase Invoices</option></select></label><label class="drop-zone"><input id="import-file" type="file" accept=".csv,.xlsx,.xlsm,.xls" required /><span data-icon="upload"></span><strong>Vyapar export file choose karein</strong><small>CSV, XLSX, XLS supported</small><em id="chosen-file"></em></label><div class="button-row"><button id="preview-import" type="button" class="btn secondary">Preview</button><button type="submit" class="btn primary">Start Import</button></div></form><div id="import-result" class="import-result hidden"></div></article>
+        <article class="card"><div class="section-title"><h2>Import order</h2></div><ol class="steps"><li><b>Items & Stock</b><small>Product master pehle upload karein.</small></li><li><b>Parties</b><small>Customers aur suppliers import karein.</small></li><li><b>Sales / Purchases</b><small>Invoice line reports upload karein.</small></li><li><b>Verify Totals</b><small>Stock aur outstanding compare karein.</small></li></ol></article>
+        <article class="card"><div class="section-title"><h2>Import History</h2></div><div id="import-history" class="simple-list"></div></article>
+      </section>
+
+      <section id="page-reports" class="page">
+        <div class="page-heading"><div><h1>Business Reports</h1><p>Sale, purchase, stock and profitability</p></div></div>
+        <article class="card"><div class="report-filter"><input id="report-from" type="date" /><input id="report-to" type="date" /><button id="load-report" class="btn primary">Generate</button></div><div id="report-cards" class="report-grid"></div></article>
+        <article class="card"><div class="section-title"><h2>Top Selling Items</h2></div><div id="top-items" class="simple-list"></div></article>
+        <article class="card margin-card"><small>Estimated Margin</small><strong id="margin-number">₹0.00</strong><p>Sale minus purchase total. Exact item-wise cost history se calculation aur accurate hogi.</p></article>
+      </section>
+
+      <section id="page-settings" class="page">
+        <div class="page-heading"><div><h1>Settings</h1><p>Business profile, sync and backup</p></div></div>
+        <article class="card"><div class="section-title"><h2>Business Profile</h2></div><form id="business-form" class="form-grid"><label>Business name<input name="name" required /></label><label>Owner name<input name="owner_name" /></label><label>Mobile<input name="phone" /></label><label>GSTIN<input name="gstin" /></label><label>Invoice prefix<input name="invoice_prefix" maxlength="8" /></label><label class="full">Address<textarea name="address" rows="3"></textarea></label><button class="btn primary" type="submit">Save Settings</button></form></article>
+        <article class="card"><div class="section-title"><div><h2>Backup & Export</h2><p>Data ko phone/laptop par safe rakhein</p></div></div><div class="export-grid"><button id="export-items" class="btn secondary">Items CSV</button><button id="export-parties" class="btn secondary">Parties CSV</button><button id="export-sales" class="btn secondary">Sales CSV</button><button id="export-purchases" class="btn secondary">Purchases CSV</button><button id="backup-db" class="btn primary full">Full Database Backup</button></div></article>
+        <article class="card settings-list"><button><span data-icon="sync"></span><div><b>Sync & Share</b><small id="settings-connection">Online</small></div><span class="on-pill">ON</span></button><button id="manual-sync"><span data-icon="backup"></span><div><b>Backup / Sync Now</b><small id="settings-queue">0 pending</small></div><i data-icon="chevron"></i></button><button id="settings-logout"><span data-icon="logout"></span><div><b>Logout</b><small>Securely sign out</small></div><i data-icon="chevron"></i></button></article>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button data-go="home" class="active"><span data-icon="home"></span><b>HOME</b></button>
+      <button data-go="dashboard"><span data-icon="chart"></span><b>DASHBOARD</b></button>
+      <button data-go="items"><span data-icon="box"></span><b>ITEMS</b></button>
+      <button data-go="menu"><span data-icon="menu"></span><b>MENU</b></button>
+    </nav>
+  </div>
+
+  <dialog id="txn-launcher" class="sheet-modal"><div class="sheet-head"><h2>Transactions</h2><button class="icon-button close-modal"><span data-icon="close"></span></button></div><div class="launcher-body">
+    <h3>Sale Transactions</h3><div class="launcher-grid"><button data-entry-type="cash_in"><span data-icon="payment-in"></span>Payment-In</button><button data-open-return="sale_return"><span data-icon="return"></span>Sale Return</button><button data-document-kind="delivery_challan"><span data-icon="truck"></span>Delivery Challan</button><button data-document-kind="estimate"><span data-icon="calculator"></span>Estimate/Quotation</button><button data-document-kind="proforma"><span data-icon="receipt"></span>Proforma Invoice</button><button data-document-kind="sale_order"><span data-icon="order"></span>Sale Order</button><button data-go="sale"><span data-icon="sale"></span>Sale Invoice</button><button data-go="sale"><span data-icon="pos"></span>Mobile POS</button><button data-document-kind="sale_asset"><span data-icon="building"></span>Sale Assets</button></div>
+    <h3>Purchase Transactions</h3><div class="launcher-grid"><button data-go="purchase"><span data-icon="cart"></span>Purchase</button><button data-entry-type="cash_out"><span data-icon="payment-out"></span>Payment-Out</button><button data-open-return="purchase_return"><span data-icon="return"></span>Purchase Return</button><button data-document-kind="purchase_order"><span data-icon="order"></span>Purchase Order</button><button data-document-kind="purchase_asset"><span data-icon="building"></span>Purchase Assets</button></div>
+    <h3>Other Transactions</h3><div class="launcher-grid"><button data-entry-type="expense"><span data-icon="wallet"></span>Expenses</button><button data-entry-type="transfer"><span data-icon="transfer"></span>P2P Transfer</button></div>
+  </div></dialog>
+
+  <dialog id="item-dialog" class="modal"><form id="item-form" method="dialog"><div class="modal-head"><div><span class="eyebrow">ITEM MASTER</span><h2 id="item-modal-title">Add Item</h2></div><button type="button" class="icon-button close-modal"><span data-icon="close"></span></button></div><input type="hidden" name="id" /><div class="form-grid"><label>Item name<input name="name" required /></label><label>SKU / Item code<input name="sku" /></label><label>Barcode<input name="barcode" /></label><label>Category<input name="category" /></label><label>Unit<select name="unit"><option>pcs</option><option>kg</option><option>gm</option><option>ltr</option><option>ml</option><option>packet</option><option>box</option><option>dozen</option></select></label><label>Size / Pack<input name="size" placeholder="e.g. 500 gm, 1 kg" /></label><label>HSN<input name="hsn" /></label><label>Purchase rate<input name="purchase_price" type="number" step="0.01" value="0" /></label><label>Sale rate<input name="sale_price" type="number" step="0.01" value="0" /></label><label>MRP<input name="mrp" type="number" step="0.01" value="0" /></label><label>GST %<input name="gst_rate" type="number" step="0.01" value="0" /></label><label>Current stock<input name="stock" type="number" step="0.001" value="0" /></label><label>Low stock alert<input name="min_stock" type="number" step="0.001" value="0" /></label></div><div class="modal-actions"><button type="button" class="btn secondary close-modal">Cancel</button><button type="submit" class="btn primary">Save Item</button></div></form></dialog>
+
+  <dialog id="party-dialog" class="modal"><form id="party-form" method="dialog"><div class="modal-head"><div><span class="eyebrow">PARTY MASTER</span><h2 id="party-modal-title">Add Party</h2></div><button type="button" class="icon-button close-modal"><span data-icon="close"></span></button></div><input type="hidden" name="id" /><div class="form-grid"><label>Party name<input name="name" required /></label><label>Type<select name="type"><option value="customer">Customer</option><option value="supplier">Supplier</option><option value="both">Both</option></select></label><label>Mobile<input name="phone" /></label><label>GSTIN<input name="gstin" /></label><label>Opening balance<input name="opening_balance" type="number" step="0.01" value="0" /></label><label class="full">Address<textarea name="address" rows="2"></textarea></label></div><div class="modal-actions"><button type="button" class="btn secondary close-modal">Cancel</button><button type="submit" class="btn primary">Save Party</button></div></form></dialog>
+
+  <dialog id="ledger-dialog" class="modal wide"><div class="modal-head"><div><span class="eyebrow">PARTY KHATA</span><h2 id="ledger-title">Ledger</h2></div><button class="icon-button close-modal"><span data-icon="close"></span></button></div><div id="ledger-summary" class="ledger-summary"></div><form id="payment-form" class="payment-form"><input type="hidden" name="party_id" /><label>Amount<input name="amount" type="number" min="0.01" step="0.01" required /></label><label>Entry<select name="payment_type"><option value="received">Payment Received</option><option value="paid">Payment Paid</option></select></label><label>Date<input name="payment_date" type="date" /></label><label>Mode<select name="mode"><option>cash</option><option>upi</option><option>bank</option></select></label><label>Note<input name="note" /></label><button class="btn primary" type="submit">Add Payment</button></form><div id="ledger-list" class="simple-list"></div></dialog>
+
+  <dialog id="entry-dialog" class="modal"><form id="entry-form" method="dialog"><div class="modal-head"><div><span class="eyebrow">BUSINESS ENTRY</span><h2 id="entry-title">Add Entry</h2></div><button type="button" class="icon-button close-modal"><span data-icon="close"></span></button></div><input type="hidden" name="entry_type" /><div class="form-grid"><label>Date<input name="entry_date" type="date" required /></label><label>Title / Category<input name="title" required placeholder="e.g. Electricity bill" /></label><label>Party<select name="party_id"></select></label><label>From Account<select name="account_id"></select></label><label id="to-account-field" class="hidden">To Account<select name="to_account_id"></select></label><label>Amount<input name="amount" type="number" min="0.01" step="0.01" required /></label><label>Status<select name="status"><option value="completed">Completed</option><option value="pending">Pending</option><option value="cleared">Cleared</option></select></label><label>Mode<select name="mode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank</option><option value="cheque">Cheque</option></select></label><label class="full">Note<textarea name="note" rows="2"></textarea></label></div><div class="modal-actions"><button type="button" class="btn secondary close-modal">Cancel</button><button type="submit" class="btn primary">Save Entry</button></div></form></dialog>
+
+  <dialog id="document-dialog" class="modal"><form id="document-form" method="dialog"><div class="modal-head"><div><span class="eyebrow">BUSINESS DOCUMENT</span><h2 id="document-title">New Document</h2></div><button type="button" class="icon-button close-modal"><span data-icon="close"></span></button></div><input type="hidden" name="kind" /><div class="form-grid"><label>Date<input name="doc_date" type="date" required /></label><label>Reference No.<input name="doc_no" placeholder="Auto generated" /></label><label>Party<select name="party_id"></select></label><label>Amount<input name="amount" type="number" min="0" step="0.01" required /></label><label>Status<select name="status"><option value="open">Open</option><option value="accepted">Accepted</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label><label class="full">Note<textarea name="note" rows="3"></textarea></label></div><div class="info-banner">This professional register stores the document header and amount. Item-wise conversion and stock effect will be added in the next document workflow update.</div><div class="modal-actions"><button type="button" class="btn secondary close-modal">Cancel</button><button type="submit" class="btn primary">Save Document</button></div></form></dialog>
+
+  <dialog id="account-dialog" class="modal"><form id="account-form" method="dialog"><div class="modal-head"><div><span class="eyebrow">ACCOUNT MASTER</span><h2>Add Account</h2></div><button type="button" class="icon-button close-modal"><span data-icon="close"></span></button></div><div class="form-grid one"><label>Account name<input name="name" required placeholder="Bank / Cash / Loan name" /></label><label>Type<select name="account_type"><option value="bank">Bank</option><option value="cash">Cash</option><option value="loan">Loan</option><option value="asset">Asset</option></select></label><label>Opening balance<input name="opening_balance" type="number" step="0.01" value="0" /></label></div><div class="modal-actions"><button type="button" class="btn secondary close-modal">Cancel</button><button type="submit" class="btn primary">Save Account</button></div></form></dialog>
+
+  <dialog id="invoice-dialog" class="modal invoice-modal"><div class="modal-head no-print"><h2>Invoice Preview</h2><div class="invoice-actions"><select id="invoice-print-size" aria-label="Print size"><option value="print-a4">A4</option><option value="print-80mm">80mm Thermal</option><option value="print-58mm">58mm Thermal</option></select><button id="print-invoice" class="btn primary">Print</button><button class="icon-button close-modal"><span data-icon="close"></span></button></div></div><div id="invoice-sheet" class="invoice-sheet"></div></dialog>
+
+  <script src="/app.js?v=040"></script>
+</body>
+</html>
