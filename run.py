@@ -9,6 +9,8 @@ import backend.items_ext  # noqa: F401
 import backend.import_fix_ext  # noqa: F401
 # Reads SaleReport item-detail sheets and blocks/removes invalid zero-value imports.
 import backend.sale_import_ext  # noqa: F401
+# Exact parser for the uploaded Party/Sale/Purchase reports, including blank purchase invoice grouping.
+import backend.vyapar_exact_ext  # noqa: F401
 
 # The barcode/theme extension is temporarily disabled because its injected
 # browser bundle caused a blank screen on some Android Chrome/WebView builds.
