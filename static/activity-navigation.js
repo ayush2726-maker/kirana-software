@@ -4,25 +4,29 @@
   const style = document.createElement('style');
   style.textContent = `
     .transaction-date-heading{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin:18px 4px 8px;
-      color:var(--muted);
-      font-size:13px;
-      font-weight:800;
-      letter-spacing:.02em;
-      text-transform:uppercase;
+      display:flex;align-items:center;gap:10px;margin:18px 4px 8px;
+      color:var(--muted);font-size:13px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;
     }
-    .transaction-date-heading::after{
-      content:'';
-      height:1px;
-      flex:1;
-      background:rgba(130,145,160,.22);
-    }
+    .transaction-date-heading::after{content:'';height:1px;flex:1;background:rgba(130,145,160,.22)}
     .transaction-card + .transaction-date-heading{margin-top:22px}
+    .transaction-history-more{display:flex;justify-content:center;padding:18px 0 34px}
+    .transaction-history-more button{
+      min-width:210px;min-height:48px;border:1px solid #bed8e8;border-radius:12px;
+      background:#fff;color:#087bc1;font-size:15px;font-weight:800;cursor:pointer;
+    }
+    .transaction-history-more button:disabled{opacity:.65;cursor:default}
   `;
   document.head.appendChild(style);
+
+  const PAGE_SIZE = 200;
+  const txHistory = {
+    tab: null,
+    rows: [],
+    offset: 0,
+    hasMore: true,
+    loading: false,
+    requestId: 0,
+  };
 
   function category(kind) {
     if (kind === 'sale') return 'sale';
@@ -103,6 +107,65 @@
     }).join('');
   }
 
+  function historyRows() {
+    if (txHistory.tab === state.txTab) return txHistory.rows;
+    return state.activity;
+  }
+
+  function moreHtml() {
+    if (!txHistory.hasMore && txHistory.rows.length) {
+      return '<div class="transaction-history-more"><small>Complete history loaded</small></div>';
+    }
+    if (!txHistory.hasMore) return '';
+    return `<div class="transaction-history-more">
+      <button id="load-more-transactions" type="button" ${txHistory.loading ? 'disabled' : ''}>
+        ${txHistory.loading ? 'Loading older records…' : 'Load Older Transactions'}
+      </button>
+    </div>`;
+  }
+
+  async function loadTransactionPage(reset = false) {
+    const tab = state.txTab || 'all';
+    if (txHistory.loading && !reset) return;
+
+    const requestId = ++txHistory.requestId;
+    if (reset || txHistory.tab !== tab) {
+      txHistory.tab = tab;
+      txHistory.rows = [];
+      txHistory.offset = 0;
+      txHistory.hasMore = true;
+      const list = $('#transactions-list');
+      if (list) list.innerHTML = emptyText('Transactions load ho rahe hain…');
+    }
+    if (!txHistory.hasMore) return;
+
+    txHistory.loading = true;
+    renderTransactions();
+    try {
+      const kindParam = ['sale', 'purchase'].includes(tab) ? `&kind=${encodeURIComponent(tab)}` : '';
+      const rows = await api(`/api/activity?limit=${PAGE_SIZE}&offset=${txHistory.offset}${kindParam}`);
+      if (requestId !== txHistory.requestId || tab !== state.txTab) return;
+
+      const seen = new Set(txHistory.rows.map(row => `${row.kind}:${row.id}`));
+      rows.forEach(row => {
+        const key = `${row.kind}:${row.id}`;
+        if (!seen.has(key)) {
+          txHistory.rows.push(row);
+          seen.add(key);
+        }
+      });
+      txHistory.offset += rows.length;
+      txHistory.hasMore = rows.length === PAGE_SIZE;
+    } catch (error) {
+      toast(error.message, true);
+    } finally {
+      if (requestId === txHistory.requestId) {
+        txHistory.loading = false;
+        renderTransactions();
+      }
+    }
+  }
+
   renderActivity = function () {
     const q = ($('#activity-search')?.value || '').toLowerCase();
     const rows = dateWiseMix(state.activity.filter(row =>
@@ -113,7 +176,8 @@
 
   renderTransactions = function () {
     const q = ($('#tx-filter')?.value || '').toLowerCase();
-    const rows = dateWiseMix(state.activity.filter(row =>
+    const source = historyRows();
+    const rows = dateWiseMix(source.filter(row =>
       (state.txTab === 'all' || (state.txTab === 'other'
         ? !['sale', 'purchase'].includes(row.kind)
         : row.kind === state.txTab)) &&
@@ -136,7 +200,14 @@
     const subheading = $('#page-transactions .page-heading p');
     if (heading) heading.textContent = title;
     if (subheading) subheading.textContent = subtitle;
-    $('#transactions-list').innerHTML = groupedHtml(rows, true);
+
+    const list = $('#transactions-list');
+    if (!list) return;
+    list.innerHTML = groupedHtml(rows, true) + (txHistory.tab === state.txTab ? moreHtml() : '');
+  };
+
+  loadTransactions = async function () {
+    await loadTransactionPage(true);
   };
 
   function openFilteredTransactions(tab) {
@@ -149,6 +220,18 @@
   }
 
   document.addEventListener('click', event => {
+    const more = event.target.closest('#load-more-transactions');
+    if (more) {
+      loadTransactionPage(false);
+      return;
+    }
+
+    const tab = event.target.closest('[data-tx-tab]');
+    if (tab) {
+      setTimeout(() => loadTransactionPage(true), 0);
+      return;
+    }
+
     const launch = event.target.closest('[data-menu-launch]');
     if (!launch) return;
     const target = launch.dataset.menuLaunch;
@@ -157,4 +240,15 @@
     event.stopImmediatePropagation();
     openFilteredTransactions(target === 'sales' ? 'sale' : 'purchase');
   }, true);
+
+  let scrollTimer = null;
+  window.addEventListener('scroll', () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      if (!$('#page-transactions')?.classList.contains('active')) return;
+      if (!txHistory.hasMore || txHistory.loading) return;
+      const remaining = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+      if (remaining < 700) loadTransactionPage(false);
+    }, 80);
+  }, {passive: true});
 })();
