@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from fastapi import Depends, Header, HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from backend.app import STATIC_DIR, app, now_iso
@@ -43,7 +43,6 @@ def _generate_unique_barcode(conn: sqlite3.Connection, business_id: int, item_id
         ).fetchone()
         if not exists:
             return barcode
-    # Extremely unlikely fallback: mix the current timestamp into a 12-digit base.
     timestamp = now_iso().replace("-", "").replace(":", "").replace("T", "")
     digits = "".join(ch for ch in timestamp if ch.isdigit())[-10:].rjust(10, "0")
     base = f"29{digits}"
@@ -113,7 +112,6 @@ async def enforce_managed_user_permissions(request: Request, call_next):
     try:
         user = ext_user(authorization)
     except HTTPException:
-        # The original endpoint remains responsible for its normal authentication response.
         return await call_next(request)
 
     role = str(user.get("role") or "viewer")
@@ -169,12 +167,18 @@ async def inject_complete_feature_assets(request: Request, call_next):
     if request.method == "GET" and request.url.path == "/":
         html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
         head_assets = (
-            '<link rel="stylesheet" href="/settings-v2.css?v=045" />'
-            '<link rel="stylesheet" href="/features-v1.css?v=045" />'
+            '<link rel="stylesheet" href="/settings-v2.css?v=046" />'
+            '<link rel="stylesheet" href="/features-v1.css?v=046" />'
+        )
+        popup_compat = (
+            '<script>(function(){var nativeOpen=window.open.bind(window);window.open=function(url,target,features){'
+            'var safeFeatures=features==="noopener,noreferrer"?"":features;var opened=nativeOpen(url,target,safeFeatures);'
+            'if(opened){try{opened.opener=null}catch(e){}}return opened;};})();</script>'
         )
         body_assets = (
-            '<script src="/settings-v2.js?v=045"></script>'
-            '<script src="/features-v1.js?v=045"></script>'
+            popup_compat
+            + '<script src="/settings-v2.js?v=046"></script>'
+            + '<script src="/features-v1.js?v=046"></script>'
         )
         html = html.replace("</head>", f"{head_assets}</head>")
         html = html.replace("</body>", f"{body_assets}</body>")
@@ -182,7 +186,6 @@ async def inject_complete_feature_assets(request: Request, call_next):
     return await call_next(request)
 
 
-# All extension routes must be evaluated before the SPA catch-all route.
 extension_paths = {
     "/api/items/{item_id}/barcode/generate",
     "/api/items/barcodes/generate-missing",
