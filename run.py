@@ -13,6 +13,8 @@ import backend.sale_import_ext  # noqa: F401
 import backend.vyapar_exact_ext  # noqa: F401
 # Shows sale/purchase/other entries in a date-wise mixed timeline and fixes menu navigation.
 import backend.activity_navigation_ext  # noqa: F401
+# Groups every invoice's item rows, detects old item-wise duplicate imports and adds the Sale item picker.
+import backend.sale_workflow_ext  # noqa: F401
 
 # The barcode/theme extension is temporarily disabled because its injected
 # browser bundle caused a blank screen on some Android Chrome/WebView builds.
