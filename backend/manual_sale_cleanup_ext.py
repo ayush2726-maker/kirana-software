@@ -80,7 +80,7 @@ async def inject_manual_cleanup_assets(request, call_next):
             '<script src="/import-fix.js?v=044"></script>'
             '<script src="/activity-navigation.js?v=046"></script>'
             '<script src="/sale-item-picker.js?v=044"></script>'
-            '<script src="/manual-sale-cleanup.js?v=045"></script></body>',
+            '<script src="/manual-sale-cleanup.js?v=047"></script></body>',
         )
         return HTMLResponse(
             html,
