@@ -19,7 +19,9 @@ import backend.sale_workflow_ext  # noqa: F401
 import backend.manual_sale_cleanup_ext  # noqa: F401
 # Stores Payment In/Out receipts and invoice-wise allocations.
 import backend.payment_link_ext  # noqa: F401
-# Final browser shell: amount-first bill adjustment and permanently visible duplicate cleanup card.
+# Explicit owner-confirmed removal of a selected imported Sales batch.
+import backend.import_batch_remove_ext  # noqa: F401
+# Final browser shell: amount-first payment adjustment and permanent cleanup controls.
 import backend.ui_shell_v2_ext  # noqa: F401
 
 # The barcode/theme extension is temporarily disabled because its injected
