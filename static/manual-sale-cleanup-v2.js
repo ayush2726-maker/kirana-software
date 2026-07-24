@@ -32,10 +32,10 @@
         <h2>${count ? `${count} item-wise duplicate Sale bills mile` : 'Duplicate Sale Bills Cleanup'}</h2>
         <p>${count
           ? `${batches} old SaleReport batch mein har item ka alag bill bana hua hai. Inhe remove karke original SaleReport dobara import karein.`
-          : 'Imported SaleReport mein har item ka alag bill bana ho to yahan check karein. Button hamesha visible rahega.'}</p>
+          : 'Automatic strict check optional hai. Direct removal ke liye neeche Sales Import Batches section use karein.'}</p>
       </div>
-      <button data-manual-cleanup-sales-v2 class="btn primary" type="button" ${loading ? 'disabled' : ''}>
-        ${loading ? 'Checking…' : count ? `Remove ${count} Duplicate Sale Bills` : 'Check Duplicate Sale Bills'}
+      <button data-manual-cleanup-sales-v2 class="btn secondary" type="button" ${loading ? 'disabled' : ''}>
+        ${loading ? 'Checking…' : count ? `Remove ${count} Duplicate Sale Bills` : 'Automatic Duplicate Check'}
       </button>
     `;
   }
@@ -63,7 +63,7 @@
       page.insertBefore(banner, tabs || page.firstChild);
     }
     const count = auditCount(audit);
-    banner.innerHTML = `<b>${count ? `${count} duplicate Sale bills mile` : 'Duplicate Sale Bills Check'}</b><p>${count ? 'Old item-wise imported bills remove karke report dobara import karein.' : 'Old imported bills item-wise bane ho to check karein.'}</p><button data-manual-cleanup-sales-v2 class="btn primary" type="button">${count ? `Remove ${count} Duplicate Sale Bills` : 'Check Duplicate Sale Bills'}</button>`;
+    banner.innerHTML = `<b>${count ? `${count} duplicate Sale bills mile` : 'Duplicate Sale Bills Check'}</b><p>${count ? 'Old item-wise imported bills remove karke report dobara import karein.' : 'Direct batch removal Vyapar Import page mein available hai.'}</p><button data-manual-cleanup-sales-v2 class="btn secondary" type="button">${count ? `Remove ${count} Duplicate Sale Bills` : 'Automatic Duplicate Check'}</button>`;
   }
 
   function renderAll(audit = currentAudit || {}) {
@@ -79,7 +79,7 @@
       currentAudit = await api('/api/import/manual-itemwise-sales', {method: 'POST'});
     } catch (error) {
       currentAudit = {};
-      console.warn('Duplicate sale audit failed', error);
+      toast(error.message || 'Duplicate check failed', true);
     } finally {
       loading = false;
       renderAll(currentAudit);
@@ -91,7 +91,7 @@
     const audit = await fetchAudit();
     const count = auditCount(audit);
     if (!count) {
-      toast('Koi high-confidence duplicate SaleReport batch nahi mila');
+      toast('Automatic match nahi mila. Vyapar Import mein Sales Import Batches se galat import direct remove karein.');
       return;
     }
     const names = (audit.batches || []).map(row => row.filename).filter(Boolean).join(', ');
@@ -114,7 +114,6 @@
       if (typeof loadImportHistory === 'function' && document.querySelector('#page-import')?.classList.contains('active')) {
         await loadImportHistory();
       }
-      await fetchAudit();
     } catch (error) {
       toast(error.message, true);
     } finally {
@@ -139,5 +138,4 @@
   }
 
   renderCard({});
-  setTimeout(fetchAudit, 300);
 })();
