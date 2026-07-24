@@ -53,7 +53,8 @@ async def serve_ui_shell_v2(request, call_next):
             '<script src="/sale-item-picker.js?v=044"></script>'
             '<script src="/manual-sale-cleanup-v2.js?v=051"></script>'
             '<script src="/payment-link-v2.js?v=050"></script>'
-            '<script src="/import-batch-remove.js?v=051"></script></body>',
+            '<script src="/import-batch-remove.js?v=051"></script>'
+            '<script src="/password-change.js?v=052"></script></body>',
         )
         return HTMLResponse(
             html,
