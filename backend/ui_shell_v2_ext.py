@@ -44,7 +44,9 @@ async def serve_ui_shell_v2(request, call_next):
         html = html.replace(
             "</head>",
             '<link rel="stylesheet" href="/settings-v2.css?v=042" />'
-            '<link rel="stylesheet" href="/order-center.css?v=060" /></head>',
+            '<link rel="stylesheet" href="/order-center.css?v=060" />'
+            '<link rel="stylesheet" href="/customer-otp-owner.css?v=062" />'
+            '<link rel="stylesheet" href="/saas-onboarding.css?v=062" /></head>',
         )
         html = html.replace(
             "</body>",
@@ -56,7 +58,9 @@ async def serve_ui_shell_v2(request, call_next):
             '<script src="/payment-link-v2.js?v=050"></script>'
             '<script src="/import-batch-remove.js?v=051"></script>'
             '<script src="/password-change.js?v=052"></script>'
-            '<script src="/order-center.js?v=060"></script></body>',
+            '<script src="/order-center.js?v=060"></script>'
+            '<script src="/customer-otp-owner.js?v=062"></script>'
+            '<script src="/saas-onboarding.js?v=062"></script></body>',
         )
         return HTMLResponse(
             html,
