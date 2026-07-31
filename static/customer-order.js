@@ -1,4 +1,5 @@
 (() => {
+  const shopSlug = String(new URLSearchParams(location.search).get('shop') || '').trim();
   const state = {
     token: localStorage.getItem('ks_customer_token') || '',
     me: null,
@@ -37,6 +38,8 @@
   async function boot() {
     bind();
     renderCart();
+    const savedShop = localStorage.getItem('ks_customer_shop') || '';
+    if (state.token && shopSlug && savedShop && savedShop !== shopSlug) logout(false);
     if (!state.token) return showLogin();
     try {
       await enterApp();
@@ -64,10 +67,11 @@
     try {
       const result = await api('/api/customer/login', {
         method: 'POST',
-        body: { phone: form.get('phone'), pin: form.get('pin') }
+        body: { phone: form.get('phone'), pin: form.get('pin'), shop_slug: shopSlug }
       });
       state.token = result.token;
       localStorage.setItem('ks_customer_token', state.token);
+      localStorage.setItem('ks_customer_shop', result.shop_slug || shopSlug);
       await enterApp();
     } catch (error) {
       toast(error.message, true);
@@ -90,6 +94,7 @@
     state.me = null;
     state.cart = [];
     localStorage.removeItem('ks_customer_token');
+    localStorage.removeItem('ks_customer_shop');
     showLogin();
   }
 
