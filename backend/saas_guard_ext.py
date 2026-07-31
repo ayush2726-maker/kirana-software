@@ -66,8 +66,9 @@ async def enforce_saas_subscription(request: Request, call_next):
         return await call_next(request)
 
     ensure_saas_schema()
+    status: str | None = None
     with db() as conn:
-        owner = conn.execute(
+        row = conn.execute(
             """
             SELECT sb.business_id,sb.subscription_status,sb.trial_ends_at,sb.paid_until
             FROM sessions s
@@ -77,7 +78,6 @@ async def enforce_saas_subscription(request: Request, call_next):
             """,
             (token, now_iso()),
         ).fetchone()
-        row = owner
         if not row:
             row = conn.execute(
                 """
@@ -89,14 +89,13 @@ async def enforce_saas_subscription(request: Request, call_next):
                 """,
                 (token, now_iso()),
             ).fetchone()
-        if not row:
-            return await call_next(request)
-        status = effective_status(row)
-        if status == "expired" and row["subscription_status"] != "expired":
-            conn.execute(
-                "UPDATE saas_businesses SET subscription_status='expired',updated_at=? WHERE business_id=?",
-                (now_iso(), row["business_id"]),
-            )
-        if status in {"expired", "suspended"}:
-            return blocked_response(status)
+        if row:
+            status = effective_status(row)
+            if status == "expired" and row["subscription_status"] != "expired":
+                conn.execute(
+                    "UPDATE saas_businesses SET subscription_status='expired',updated_at=? WHERE business_id=?",
+                    (now_iso(), row["business_id"]),
+                )
+    if status in {"expired", "suspended"}:
+        return blocked_response(status)
     return await call_next(request)
