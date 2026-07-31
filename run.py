@@ -25,9 +25,11 @@ import backend.import_batch_remove_ext  # noqa: F401
 import backend.password_change_ext  # noqa: F401
 # Customer self-ordering, customer-specific rates and order-to-bill conversion.
 import backend.order_portal_ext  # noqa: F401
-# Existing database customers can self-register using their saved mobile number.
+# Multi-business SaaS signup, trial plans and unique shop links.
+import backend.saas_ext  # noqa: F401
+# Existing database customers register only after owner-sent WhatsApp OTP verification.
 import backend.customer_self_register_ext  # noqa: F401
-# Final browser shell: amount-first payment adjustment, cleanup controls, account security and orders UI.
+# Final browser shell: billing controls, security, customer orders and SaaS UI.
 import backend.ui_shell_v2_ext  # noqa: F401
 
 # The barcode/theme extension is temporarily disabled because its injected
