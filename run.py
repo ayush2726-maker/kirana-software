@@ -25,6 +25,8 @@ import backend.import_batch_remove_ext  # noqa: F401
 import backend.password_change_ext  # noqa: F401
 # Customer self-ordering, customer-specific rates and order-to-bill conversion.
 import backend.order_portal_ext  # noqa: F401
+# Existing database customers can self-register using their saved mobile number.
+import backend.customer_self_register_ext  # noqa: F401
 # Final browser shell: amount-first payment adjustment, cleanup controls, account security and orders UI.
 import backend.ui_shell_v2_ext  # noqa: F401
 
