@@ -27,6 +27,8 @@ import backend.password_change_ext  # noqa: F401
 import backend.order_portal_ext  # noqa: F401
 # Multi-business SaaS signup, trial plans and unique shop links.
 import backend.saas_ext  # noqa: F401
+# Enforces trial expiry and seller-controlled suspension.
+import backend.saas_guard_ext  # noqa: F401
 # Existing database customers register only after owner-sent WhatsApp OTP verification.
 import backend.customer_self_register_ext  # noqa: F401
 # Final browser shell: billing controls, security, customer orders and SaaS UI.
