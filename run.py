@@ -23,7 +23,9 @@ import backend.payment_link_ext  # noqa: F401
 import backend.import_batch_remove_ext  # noqa: F401
 # Secure current-user password change and logout of old sessions.
 import backend.password_change_ext  # noqa: F401
-# Final browser shell: amount-first payment adjustment, cleanup controls and account security UI.
+# Customer self-ordering, customer-specific rates and order-to-bill conversion.
+import backend.order_portal_ext  # noqa: F401
+# Final browser shell: amount-first payment adjustment, cleanup controls, account security and orders UI.
 import backend.ui_shell_v2_ext  # noqa: F401
 
 # The barcode/theme extension is temporarily disabled because its injected
