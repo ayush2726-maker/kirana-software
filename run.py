@@ -53,6 +53,8 @@ import backend.frontend_rescue_ext  # noqa: F401
 import backend.owner_session_ext  # noqa: F401
 # Outermost syntax-correct owner dashboard JavaScript response.
 import backend.owner_core_fix_ext  # noqa: F401
+# Inline navigation and basic data loading that does not depend on the large legacy bundle.
+import backend.owner_inline_navigation_ext  # noqa: F401
 # Disabled: this response-rewrapping middleware caused Railway upstream errors.
 # import backend.owner_dashboard_session_ext  # noqa: F401
 
