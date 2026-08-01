@@ -1,0 +1,25 @@
+name: Publish Kirana Android OTA
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'App.js'
+      - 'mobile/App.js'
+
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+defaults:
+  image: sdk-57
+
+jobs:
+  publish_android_update:
+    name: Publish production OTA update
+    type: update
+    environment: production
+    params:
+      platform: android
+      channel: production
+      message: Kirana Software Mobile OTA
