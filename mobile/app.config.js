@@ -6,24 +6,35 @@ const expo = {
   name: "Kirana Software Mobile",
   slug: "kirana-software-mobile",
   owner: "ayush2726",
-  version: "1.0.0",
+  version: "1.0.1",
   orientation: "portrait",
   userInterfaceStyle: "light",
   backgroundColor: "#eef7fd",
   scheme: "kiranasoftware",
-  newArchEnabled: true,
+  icon: "./assets/icon.png",
+  splash: {
+    image: "./assets/splash.png",
+    resizeMode: "contain",
+    backgroundColor: "#eef7fd"
+  },
+  newArchEnabled: false,
   runtimeVersion: {
     policy: "appVersion"
   },
   android: {
     package: ANDROID_PACKAGE,
-    versionCode: 2,
+    versionCode: 3,
     edgeToEdgeEnabled: true,
-    permissions: ["INTERNET"]
+    softwareKeyboardLayoutMode: "resize",
+    permissions: ["INTERNET"],
+    adaptiveIcon: {
+      foregroundImage: "./assets/adaptive-icon.png",
+      backgroundColor: "#eef7fd"
+    }
   },
   ios: {
     bundleIdentifier: ANDROID_PACKAGE,
-    buildNumber: "2",
+    buildNumber: "3",
     supportsTablet: true
   },
   extra: {
