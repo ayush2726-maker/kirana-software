@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import json
 import secrets
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs
@@ -12,8 +13,8 @@ from backend.app import app, db, now_iso, verify_password
 
 
 COOKIE_NAME = "ks_owner_session"
-PLACEHOLDER_TOKEN = "__cookie_session__"
 SESSION_DAYS = 30
+FRONTEND_VERSION = "071"
 
 
 def _session_row(token: str | None):
@@ -29,6 +30,19 @@ def _session_row(token: str | None):
             """,
             (token, now_iso()),
         ).fetchone()
+
+
+def _set_session_cookie(response, token: str) -> None:
+    response.set_cookie(
+        COOKIE_NAME,
+        token,
+        max_age=SESSION_DAYS * 24 * 60 * 60,
+        expires=SESSION_DAYS * 24 * 60 * 60,
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
 
 
 def _login_page(error: str = "", username: str = "admin", status_code: int = 200) -> HTMLResponse:
@@ -93,7 +107,7 @@ def _login_page(error: str = "", username: str = "admin", status_code: int = 200
       <input id="password" name="password" type="password" inputmode="numeric" autocomplete="current-password" minlength="4" required autofocus />
       <button type="submit">Login</button>
     </form>
-    <p class="help">This login works directly from the server and does not depend on the app's JavaScript.</p>
+    <p class="help">Secure server login for the Kirana Software owner app.</p>
   </main>
 </body>
 </html>"""
@@ -109,13 +123,15 @@ def _login_page(error: str = "", username: str = "admin", status_code: int = 200
 
 
 def _login_success(token: str) -> HTMLResponse:
+    token_json = json.dumps(token)
     page = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login successful</title>
 <style>body{{font-family:Arial,sans-serif;background:#eef7fd;color:#263545;display:grid;place-items:center;min-height:100vh;margin:0;padding:24px}}.box{{background:#fff;border-radius:22px;padding:30px;max-width:420px;text-align:center;box-shadow:0 16px 45px #075f912b}}.logo{{width:74px;height:74px;border-radius:22px;background:#0b82c2;color:#fff;display:grid;place-items:center;font-size:45px;font-weight:900;margin:auto}}h2{{margin:20px 0 8px}}p{{color:#657584}}</style></head>
 <body><div class="box"><div class="logo">K</div><h2>Login successful</h2><p>Opening your business dashboard...</p></div>
 <script>
-try {{ localStorage.setItem('ks_token', '{PLACEHOLDER_TOKEN}'); }} catch (_) {{}}
-window.location.replace('/?session=1&v=070&t=' + Date.now());
+const token = {token_json};
+try {{ localStorage.setItem('ks_token', token); }} catch (_) {{}}
+window.location.replace('/?handoff=' + encodeURIComponent(token) + '&v={FRONTEND_VERSION}&t=' + Date.now());
 </script></body></html>"""
     response = HTMLResponse(
         page,
@@ -125,16 +141,27 @@ window.location.replace('/?session=1&v=070&t=' + Date.now());
             "Expires": "0",
         },
     )
-    response.set_cookie(
-        COOKIE_NAME,
-        token,
-        max_age=SESSION_DAYS * 24 * 60 * 60,
-        expires=SESSION_DAYS * 24 * 60 * 60,
-        path="/",
-        secure=True,
-        httponly=True,
-        samesite="lax",
-    )
+    _set_session_cookie(response, token)
+    return response
+
+
+def _dashboard_page(token: str) -> HTMLResponse:
+    # Import lazily to avoid module import cycles during startup.
+    from backend.frontend_rescue_ext import no_cache_headers, owner_html
+
+    token_json = json.dumps(token)
+    bootstrap = f"""
+<script>
+(() => {{
+  const token = {token_json};
+  try {{ localStorage.setItem('ks_token', token); }} catch (_) {{}}
+  try {{ history.replaceState(null, '', '/?session=1&v={FRONTEND_VERSION}'); }} catch (_) {{}}
+}})();
+</script>
+"""
+    page = owner_html().replace("</head>", bootstrap + "</head>", 1)
+    response = HTMLResponse(page, headers=no_cache_headers())
+    _set_session_cookie(response, token)
     return response
 
 
@@ -183,15 +210,20 @@ async def owner_server_session(request: Request, call_next):
         return _login_success(token)
 
     cookie_token = request.cookies.get(COOKIE_NAME)
-    session = _session_row(cookie_token)
+    handoff_token = request.query_params.get("handoff") if path == "/" else None
+    session = _session_row(handoff_token) or _session_row(cookie_token)
 
-    if request.method == "GET" and path in {"/", "/owner-login"}:
+    if request.method == "GET" and path == "/owner-login":
+        if session:
+            return RedirectResponse(f"/?session=1&v={FRONTEND_VERSION}", status_code=303)
+        return _login_page()
+
+    if request.method == "GET" and path == "/":
         if not session:
             return _login_page()
-        if path == "/owner-login":
-            return RedirectResponse("/?session=1&v=070", status_code=303)
+        return _dashboard_page(str(session["token"]))
 
-    if session and (path == "/" or path.startswith("/api/")):
+    if session and path.startswith("/api/"):
         _replace_authorization_header(request, str(session["token"]))
 
     response = await call_next(request)
