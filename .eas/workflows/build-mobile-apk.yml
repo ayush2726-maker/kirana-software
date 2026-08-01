@@ -12,6 +12,7 @@ on:
       - 'mobile/package.json'
       - 'mobile/app.config.js'
       - 'mobile/eas.json'
+      - 'scripts/generate-mobile-assets.js'
       - '.eas/workflows/build-mobile-apk.yml'
 
 concurrency:
@@ -29,4 +30,4 @@ jobs:
     params:
       platform: android
       profile: preview
-      message: Kirana Software Mobile 1.0.0 APK
+      message: Kirana Software Mobile 1.0.1 Touch Fix APK
