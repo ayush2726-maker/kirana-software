@@ -43,25 +43,24 @@ import backend.customer_catalog_dedupe_ext  # noqa: F401
 import backend.customer_link_fix_ext  # noqa: F401
 # Forces the latest product-card quantity UI and hides stock from customers.
 import backend.customer_product_ui_ext  # noqa: F401
-# Final browser shell: billing controls, security, customer orders and SaaS UI.
+# Legacy browser assets remain available for compatibility.
 import backend.ui_shell_v2_ext  # noqa: F401
 # One-time secure recovery for a forgotten owner PIN.
 import backend.owner_recovery_ext  # noqa: F401
-# Stable responses for / and /customer, bypassing middleware conflicts.
+# Legacy root/customer rescue routes.
 import backend.frontend_rescue_ext  # noqa: F401
-# Standalone owner login with secure cookie and local-storage session handoff.
+# Standalone owner login and secure cookie session.
 import backend.owner_session_ext  # noqa: F401
-# Outermost syntax-correct owner dashboard JavaScript response.
+# Legacy owner bundle repair kept only as a fallback.
 import backend.owner_core_fix_ext  # noqa: F401
-# Inline navigation and basic data loading that does not depend on the large legacy bundle.
+# Legacy inline fallback kept only as a fallback.
 import backend.owner_inline_navigation_ext  # noqa: F401
+# Final outermost owner route: isolated HTML/CSS/JS with no legacy bundle dependency.
+import backend.stable_owner_app_ext  # noqa: F401
+
 # Disabled: this response-rewrapping middleware caused Railway upstream errors.
 # import backend.owner_dashboard_session_ext  # noqa: F401
-
-# The barcode/theme extension is temporarily disabled because its injected
-# browser bundle caused a blank screen on some Android Chrome/WebView builds.
-# The source files remain in the repository and will be re-enabled after the
-# frontend bundle is made compatible and tested.
+# Disabled: old barcode/theme browser injection caused blank screens on Android.
 # import backend.features_ext  # noqa: F401
 
 if __name__ == "__main__":
