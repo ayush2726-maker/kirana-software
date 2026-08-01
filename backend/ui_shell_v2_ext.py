@@ -46,7 +46,6 @@ async def serve_ui_shell_v2(request, call_next):
             '<link rel="stylesheet" href="/settings-v2.css?v=042" />'
             '<link rel="stylesheet" href="/order-center.css?v=060" />'
             '<link rel="stylesheet" href="/customer-otp-owner.css?v=062" />'
-            '<link rel="stylesheet" href="/customer-catalog-manager.css?v=064" />'
             '<link rel="stylesheet" href="/saas-onboarding.css?v=062" /></head>',
         )
         html = html.replace(
@@ -62,7 +61,6 @@ async def serve_ui_shell_v2(request, call_next):
             '<script src="/order-center.js?v=060"></script>'
             '<script src="/customer-link-fix.js?v=063"></script>'
             '<script src="/customer-otp-owner.js?v=062"></script>'
-            '<script src="/customer-catalog-manager.js?v=064"></script>'
             '<script src="/saas-onboarding.js?v=062"></script></body>',
         )
         return HTMLResponse(
