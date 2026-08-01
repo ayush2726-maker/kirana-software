@@ -16,6 +16,27 @@ import * as Updates from "expo-updates";
 
 const APP_ORIGIN = (process.env.EXPO_PUBLIC_APP_URL || "https://web-production-02514.up.railway.app").replace(/\/$/, "");
 const OWNER_URL = `${APP_ORIGIN}/?mobile=1`;
+const MAX_LOADING_TIME_MS = 7000;
+
+const PAGE_READY_SCRIPT = `
+(function () {
+  function sendReady() {
+    try {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "KIRANA_PAGE_READY" }));
+    } catch (error) {}
+  }
+
+  if (document.readyState === "interactive" || document.readyState === "complete") {
+    setTimeout(sendReady, 50);
+  } else {
+    document.addEventListener("DOMContentLoaded", sendReady, { once: true });
+  }
+
+  window.addEventListener("load", sendReady, { once: true });
+  setTimeout(sendReady, 2500);
+})();
+true;
+`;
 
 function withTimeout(promise, milliseconds) {
   return Promise.race([
@@ -58,17 +79,44 @@ function ConnectionError({ message, onRetry }) {
 
 export default function App() {
   const webRef = useRef(null);
+  const loadingTimerRef = useRef(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [updateMessage, setUpdateMessage] = useState("");
 
+  const clearLoadingTimer = useCallback(() => {
+    if (loadingTimerRef.current) {
+      clearTimeout(loadingTimerRef.current);
+      loadingTimerRef.current = null;
+    }
+  }, []);
+
+  const finishLoading = useCallback(() => {
+    clearLoadingTimer();
+    setPageLoading(false);
+  }, [clearLoadingTimer]);
+
+  const startLoading = useCallback(() => {
+    clearLoadingTimer();
+    setPageLoading(true);
+    loadingTimerRef.current = setTimeout(() => {
+      loadingTimerRef.current = null;
+      setPageLoading(false);
+    }, MAX_LOADING_TIME_MS);
+  }, [clearLoadingTimer]);
+
   const reloadWebApp = useCallback(() => {
     setLoadError("");
-    setPageLoading(true);
+    startLoading();
     setReloadKey(value => value + 1);
-  }, []);
+  }, [startLoading]);
+
+  useEffect(() => {
+    startLoading();
+    return clearLoadingTimer;
+  }, [clearLoadingTimer, startLoading]);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,6 +164,16 @@ export default function App() {
     return true;
   }, []);
 
+  const handleWebMessage = useCallback(event => {
+    const raw = event?.nativeEvent?.data;
+    try {
+      const message = JSON.parse(raw || "{}");
+      if (message?.type === "KIRANA_PAGE_READY") finishLoading();
+    } catch (error) {
+      if (raw === "KIRANA_PAGE_READY") finishLoading();
+    }
+  }, [finishLoading]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#087fbf" barStyle="light-content" />
@@ -152,22 +210,31 @@ export default function App() {
               allowFileAccess
               allowContentAccess
               userAgent="KiranaSoftwareMobile/1.0 Android"
+              injectedJavaScript={PAGE_READY_SCRIPT}
+              onMessage={handleWebMessage}
               onShouldStartLoadWithRequest={handleNavigationRequest}
-              onNavigationStateChange={navState => setCanGoBack(Boolean(navState.canGoBack))}
+              onNavigationStateChange={navState => {
+                setCanGoBack(Boolean(navState.canGoBack));
+                if (navState?.url && navState.url !== "about:blank") finishLoading();
+              }}
               onLoadStart={() => {
                 setLoadError("");
-                setPageLoading(true);
+                startLoading();
               }}
-              onLoadEnd={() => setPageLoading(false)}
+              onLoadProgress={event => {
+                const progress = Number(event?.nativeEvent?.progress || 0);
+                if (progress >= 0.6) finishLoading();
+              }}
+              onLoadEnd={finishLoading}
               onError={event => {
                 const description = event?.nativeEvent?.description || "Server se connection nahi ho paya.";
-                setPageLoading(false);
+                finishLoading();
                 setLoadError(description);
               }}
               onHttpError={event => {
                 const status = event?.nativeEvent?.statusCode;
                 if (Number(status) >= 500) {
-                  setPageLoading(false);
+                  finishLoading();
                   setLoadError(`Server error ${status}. Dobara try karein.`);
                 }
               }}
@@ -214,6 +281,8 @@ const styles = StyleSheet.create({
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+    elevation: 20,
     alignItems: "center",
     justifyContent: "center",
     padding: 28,
