@@ -10,7 +10,26 @@ from backend.owner_session_ext import COOKIE_NAME, _session_row, _set_session_co
 OWNER_HTML = STATIC_DIR / "owner-stable.html"
 OWNER_CSS = STATIC_DIR / "owner-stable.css"
 OWNER_JS = STATIC_DIR / "owner-stable.js"
-VERSION = "100"
+VERSION = "101"
+
+CACHE_CLEANUP = r"""
+<script id="kirana-cache-cleanup">
+(function () {
+  try {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (rows) {
+        rows.forEach(function (row) { row.unregister(); });
+      }).catch(function () {});
+    }
+    if ('caches' in window) {
+      caches.keys().then(function (keys) {
+        return Promise.all(keys.map(function (key) { return caches.delete(key); }));
+      }).catch(function () {});
+    }
+  } catch (ignore) {}
+})();
+</script>
+"""
 
 
 def no_cache_headers() -> dict[str, str]:
@@ -24,7 +43,15 @@ def no_cache_headers() -> dict[str, str]:
 def stable_owner_page(token: str) -> HTMLResponse:
     page = OWNER_HTML.read_text(encoding="utf-8")
     page = page.replace("__OWNER_VERSION__", VERSION)
-    response = HTMLResponse(page, headers={**no_cache_headers(), "X-Kirana-Owner-UI": VERSION})
+    page = page.replace("</head>", CACHE_CLEANUP + "</head>", 1)
+    response = HTMLResponse(
+        page,
+        headers={
+            **no_cache_headers(),
+            "Clear-Site-Data": '"cache"',
+            "X-Kirana-Owner-UI": VERSION,
+        },
+    )
     _set_session_cookie(response, token)
     return response
 
