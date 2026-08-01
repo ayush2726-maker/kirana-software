@@ -1,0 +1,51 @@
+name: Validate Kirana Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'static/**'
+      - 'backend/**'
+      - 'run.py'
+      - '.github/workflows/validate-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build repaired owner bundle
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          core = Path('static/app.js').read_text(encoding='utf-8')
+          broken = "if(metaEl)metaEl.textContent=`${line.size?`${line.size} · `:''}${line.unit||'pcs'} · GST ${line.gst_rate}%`}updateCartTotals(k)}"
+          repaired = "if(metaEl){metaEl.textContent=`${line.size?`${line.size} · `:''}${line.unit||'pcs'} · GST ${line.gst_rate}%`;}updateCartTotals(k)}"
+          if broken not in core:
+              raise SystemExit('Expected owner bundle repair target was not found')
+          fixed = core.replace(broken, repaired, 1)
+          if broken in fixed:
+              raise SystemExit('Owner bundle repair did not apply')
+          Path('/tmp/owner-core.js').write_text(fixed, encoding='utf-8')
+          PY
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check /tmp/owner-core.js
+          node --check static/owner-login-rescue.js
+          node --check static/english-ui.js
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile \
+            backend/frontend_rescue_ext.py \
+            backend/owner_session_ext.py \
+            backend/owner_recovery_ext.py \
+            run.py
