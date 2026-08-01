@@ -47,8 +47,10 @@ import backend.customer_product_ui_ext  # noqa: F401
 import backend.ui_shell_v2_ext  # noqa: F401
 # One-time secure recovery for a forgotten owner PIN.
 import backend.owner_recovery_ext  # noqa: F401
-# Outermost stable responses for / and /customer, bypassing middleware conflicts.
+# Stable responses for / and /customer, bypassing middleware conflicts.
 import backend.frontend_rescue_ext  # noqa: F401
+# Outermost standalone owner login with secure cookie-backed sessions.
+import backend.owner_session_ext  # noqa: F401
 
 # The barcode/theme extension is temporarily disabled because its injected
 # browser bundle caused a blank screen on some Android Chrome/WebView builds.
