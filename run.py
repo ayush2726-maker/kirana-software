@@ -33,6 +33,8 @@ import backend.saas_ext  # noqa: F401
 import backend.saas_guard_ext  # noqa: F401
 # Existing database customers register only after owner-sent WhatsApp OTP verification.
 import backend.customer_self_register_ext  # noqa: F401
+# Redirects old /customer links and resolves the primary shop safely.
+import backend.customer_link_fix_ext  # noqa: F401
 # Final browser shell: billing controls, security, customer orders and SaaS UI.
 import backend.ui_shell_v2_ext  # noqa: F401
 
