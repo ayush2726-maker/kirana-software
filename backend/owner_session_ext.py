@@ -4,7 +4,7 @@ import html
 import json
 import secrets
 from datetime import datetime, timedelta
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -14,7 +14,7 @@ from backend.app import app, db, now_iso, verify_password
 
 COOKIE_NAME = "ks_owner_session"
 SESSION_DAYS = 30
-FRONTEND_VERSION = "071"
+FRONTEND_VERSION = "074"
 
 
 def _session_row(token: str | None):
@@ -122,29 +122,6 @@ def _login_page(error: str = "", username: str = "admin", status_code: int = 200
     )
 
 
-def _login_success(token: str) -> HTMLResponse:
-    token_json = json.dumps(token)
-    page = f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login successful</title>
-<style>body{{font-family:Arial,sans-serif;background:#eef7fd;color:#263545;display:grid;place-items:center;min-height:100vh;margin:0;padding:24px}}.box{{background:#fff;border-radius:22px;padding:30px;max-width:420px;text-align:center;box-shadow:0 16px 45px #075f912b}}.logo{{width:74px;height:74px;border-radius:22px;background:#0b82c2;color:#fff;display:grid;place-items:center;font-size:45px;font-weight:900;margin:auto}}h2{{margin:20px 0 8px}}p{{color:#657584}}</style></head>
-<body><div class="box"><div class="logo">K</div><h2>Login successful</h2><p>Opening your business dashboard...</p></div>
-<script>
-const token = {token_json};
-try {{ localStorage.setItem('ks_token', token); }} catch (_) {{}}
-window.location.replace('/?handoff=' + encodeURIComponent(token) + '&v={FRONTEND_VERSION}&t=' + Date.now());
-</script></body></html>"""
-    response = HTMLResponse(
-        page,
-        headers={
-            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-            "Pragma": "no-cache",
-            "Expires": "0",
-        },
-    )
-    _set_session_cookie(response, token)
-    return response
-
-
 def _dashboard_page(token: str) -> HTMLResponse:
     # Import lazily to avoid module import cycles during startup.
     from backend.frontend_rescue_ext import no_cache_headers, owner_html
@@ -158,9 +135,25 @@ def _dashboard_page(token: str) -> HTMLResponse:
   try {{ history.replaceState(null, '', '/?session=1&v={FRONTEND_VERSION}'); }} catch (_) {{}}
 }})();
 </script>
+<style id="owner-authenticated-first-paint">
+  #auth-screen{{display:none!important}}
+  #app-shell{{display:block!important}}
+</style>
 """
-    page = owner_html().replace("</head>", bootstrap + "</head>", 1)
+    page = owner_html()
+    page = page.replace(
+        '<section id="auth-screen" class="auth-screen">',
+        '<section id="auth-screen" class="auth-screen hidden">',
+        1,
+    )
+    page = page.replace(
+        '<div id="app-shell" class="app-shell hidden">',
+        '<div id="app-shell" class="app-shell">',
+        1,
+    )
+    page = page.replace("</head>", bootstrap + "</head>", 1)
     response = HTMLResponse(page, headers=no_cache_headers())
+    response.headers["X-Owner-Session-Version"] = FRONTEND_VERSION
     _set_session_cookie(response, token)
     return response
 
@@ -207,7 +200,14 @@ async def owner_server_session(request: Request, call_next):
                 "INSERT INTO sessions(token,user_id,expires_at,created_at) VALUES(?,?,?,?)",
                 (token, row["id"], expires_at, now_iso()),
             )
-        return _login_success(token)
+
+        response = RedirectResponse(
+            url=f"/?handoff={quote(token)}&v={FRONTEND_VERSION}",
+            status_code=303,
+            headers={"Cache-Control": "no-store"},
+        )
+        _set_session_cookie(response, token)
+        return response
 
     cookie_token = request.cookies.get(COOKIE_NAME)
     handoff_token = request.query_params.get("handoff") if path == "/" else None
