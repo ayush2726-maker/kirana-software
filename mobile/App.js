@@ -3,8 +3,6 @@ import {
   ActivityIndicator,
   BackHandler,
   Linking,
-  Platform,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
@@ -15,51 +13,29 @@ import { WebView } from "react-native-webview";
 import * as Updates from "expo-updates";
 
 const APP_ORIGIN = (process.env.EXPO_PUBLIC_APP_URL || "https://web-production-02514.up.railway.app").replace(/\/$/, "");
-const OWNER_URL = `${APP_ORIGIN}/?mobile=1`;
-const MAX_LOADING_TIME_MS = 7000;
+const OWNER_URL = `${APP_ORIGIN}/?mobile=1&appVersion=101`;
 
-const PAGE_READY_SCRIPT = `
+const TOUCH_READY_SCRIPT = `
 (function () {
-  function sendReady() {
-    try {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "KIRANA_PAGE_READY" }));
-    } catch (error) {}
-  }
-
-  if (document.readyState === "interactive" || document.readyState === "complete") {
-    setTimeout(sendReady, 50);
-  } else {
-    document.addEventListener("DOMContentLoaded", sendReady, { once: true });
-  }
-
-  window.addEventListener("load", sendReady, { once: true });
-  setTimeout(sendReady, 2500);
+  try {
+    document.documentElement.style.pointerEvents = 'auto';
+    document.documentElement.style.touchAction = 'auto';
+    if (document.body) {
+      document.body.style.pointerEvents = 'auto';
+      document.body.style.touchAction = 'auto';
+    }
+    document.querySelectorAll('input, button, select, textarea, a, [role="button"]').forEach(function (el) {
+      el.style.pointerEvents = 'auto';
+      el.style.touchAction = 'manipulation';
+    });
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'KIRANA_PAGE_READY' }));
+  } catch (error) {}
 })();
 true;
 `;
 
-function withTimeout(promise, milliseconds) {
-  return Promise.race([
-    promise,
-    new Promise(resolve => setTimeout(() => resolve(null), milliseconds))
-  ]);
-}
-
 function isAppPage(url) {
   return url === "about:blank" || url.startsWith(APP_ORIGIN);
-}
-
-function LoadingOverlay({ message = "Kirana Software load ho raha hai…" }) {
-  return (
-    <View style={styles.loadingOverlay} pointerEvents="none">
-      <View style={styles.logoBox}>
-        <Text style={styles.logoText}>K</Text>
-      </View>
-      <Text style={styles.loadingTitle}>Kirana Software Mobile</Text>
-      <ActivityIndicator size="large" color="#0b82c2" style={styles.spinner} />
-      <Text style={styles.loadingText}>{message}</Text>
-    </View>
-  );
 }
 
 function ConnectionError({ message, onRetry }) {
@@ -79,44 +55,17 @@ function ConnectionError({ message, onRetry }) {
 
 export default function App() {
   const webRef = useRef(null);
-  const loadingTimerRef = useRef(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [updateMessage, setUpdateMessage] = useState("");
 
-  const clearLoadingTimer = useCallback(() => {
-    if (loadingTimerRef.current) {
-      clearTimeout(loadingTimerRef.current);
-      loadingTimerRef.current = null;
-    }
-  }, []);
-
-  const finishLoading = useCallback(() => {
-    clearLoadingTimer();
-    setPageLoading(false);
-  }, [clearLoadingTimer]);
-
-  const startLoading = useCallback(() => {
-    clearLoadingTimer();
-    setPageLoading(true);
-    loadingTimerRef.current = setTimeout(() => {
-      loadingTimerRef.current = null;
-      setPageLoading(false);
-    }, MAX_LOADING_TIME_MS);
-  }, [clearLoadingTimer]);
-
   const reloadWebApp = useCallback(() => {
     setLoadError("");
-    startLoading();
+    setPageLoading(true);
     setReloadKey(value => value + 1);
-  }, [startLoading]);
-
-  useEffect(() => {
-    startLoading();
-    return clearLoadingTimer;
-  }, [clearLoadingTimer, startLoading]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,8 +73,8 @@ export default function App() {
     async function checkForOtaUpdate() {
       if (__DEV__ || !Updates.isEnabled) return;
       try {
-        const result = await withTimeout(Updates.checkForUpdateAsync(), 5000);
-        if (cancelled || !result || !result.isAvailable) return;
+        const result = await Updates.checkForUpdateAsync();
+        if (cancelled || !result?.isAvailable) return;
         setUpdateMessage("Naya update download ho raha hai…");
         await Updates.fetchUpdateAsync();
         if (cancelled) return;
@@ -164,100 +113,102 @@ export default function App() {
     return true;
   }, []);
 
-  const handleWebMessage = useCallback(event => {
-    const raw = event?.nativeEvent?.data;
-    try {
-      const message = JSON.parse(raw || "{}");
-      if (message?.type === "KIRANA_PAGE_READY") finishLoading();
-    } catch (error) {
-      if (raw === "KIRANA_PAGE_READY") finishLoading();
-    }
-  }, [finishLoading]);
-
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.root} pointerEvents="box-none">
       <StatusBar backgroundColor="#087fbf" barStyle="light-content" />
 
       {updateMessage ? (
-        <View style={styles.updateBanner}>
+        <View style={styles.statusBanner} pointerEvents="none">
           <ActivityIndicator size="small" color="#ffffff" />
-          <Text style={styles.updateText}>{updateMessage}</Text>
+          <Text style={styles.statusText}>{updateMessage}</Text>
+        </View>
+      ) : pageLoading ? (
+        <View style={styles.statusBanner} pointerEvents="none">
+          <ActivityIndicator size="small" color="#ffffff" />
+          <Text style={styles.statusText}>Kirana Software load ho raha hai…</Text>
         </View>
       ) : null}
 
-      <View style={styles.container}>
+      <View style={styles.webContainer} pointerEvents="box-none">
         {loadError ? (
           <ConnectionError message={loadError} onRetry={reloadWebApp} />
         ) : (
-          <>
-            <WebView
-              key={reloadKey}
-              ref={webRef}
-              source={{ uri: OWNER_URL }}
-              style={styles.webView}
-              originWhitelist={["*"]}
-              javaScriptEnabled
-              domStorageEnabled
-              sharedCookiesEnabled
-              thirdPartyCookiesEnabled
-              cacheEnabled
-              incognito={false}
-              mixedContentMode="compatibility"
-              allowsBackForwardNavigationGestures
-              pullToRefreshEnabled
-              setSupportMultipleWindows={false}
-              javaScriptCanOpenWindowsAutomatically
-              allowFileAccess
-              allowContentAccess
-              userAgent="KiranaSoftwareMobile/1.0 Android"
-              injectedJavaScript={PAGE_READY_SCRIPT}
-              onMessage={handleWebMessage}
-              onShouldStartLoadWithRequest={handleNavigationRequest}
-              onNavigationStateChange={navState => {
-                setCanGoBack(Boolean(navState.canGoBack));
-                if (navState?.url && navState.url !== "about:blank") finishLoading();
-              }}
-              onLoadStart={() => {
-                setLoadError("");
-                startLoading();
-              }}
-              onLoadProgress={event => {
-                const progress = Number(event?.nativeEvent?.progress || 0);
-                if (progress >= 0.6) finishLoading();
-              }}
-              onLoadEnd={finishLoading}
-              onError={event => {
-                const description = event?.nativeEvent?.description || "Server se connection nahi ho paya.";
-                finishLoading();
-                setLoadError(description);
-              }}
-              onHttpError={event => {
-                const status = event?.nativeEvent?.statusCode;
-                if (Number(status) >= 500) {
-                  finishLoading();
-                  setLoadError(`Server error ${status}. Dobara try karein.`);
-                }
-              }}
-              onContentProcessDidTerminate={() => webRef.current?.reload()}
-              onRenderProcessGone={() => {
-                webRef.current?.reload();
-                return true;
-              }}
-            />
-            {pageLoading ? <LoadingOverlay /> : null}
-          </>
+          <WebView
+            key={reloadKey}
+            ref={webRef}
+            source={{ uri: OWNER_URL }}
+            style={styles.webView}
+            containerStyle={styles.webViewContainer}
+            pointerEvents="auto"
+            originWhitelist={["*"]}
+            javaScriptEnabled
+            domStorageEnabled
+            sharedCookiesEnabled
+            thirdPartyCookiesEnabled
+            cacheEnabled={false}
+            incognito={false}
+            mixedContentMode="compatibility"
+            allowsBackForwardNavigationGestures
+            pullToRefreshEnabled
+            nestedScrollEnabled
+            scrollEnabled
+            setSupportMultipleWindows={false}
+            javaScriptCanOpenWindowsAutomatically
+            allowFileAccess
+            allowContentAccess
+            focusable
+            androidLayerType="hardware"
+            applicationNameForUserAgent="KiranaSoftwareMobile/1.0.1"
+            injectedJavaScript={TOUCH_READY_SCRIPT}
+            injectedJavaScriptBeforeContentLoaded={TOUCH_READY_SCRIPT}
+            onShouldStartLoadWithRequest={handleNavigationRequest}
+            onNavigationStateChange={navState => {
+              setCanGoBack(Boolean(navState.canGoBack));
+              if (navState?.url && navState.url !== "about:blank") setPageLoading(false);
+            }}
+            onMessage={() => setPageLoading(false)}
+            onLoadStart={() => {
+              setLoadError("");
+              setPageLoading(true);
+            }}
+            onLoadProgress={event => {
+              if (Number(event?.nativeEvent?.progress || 0) >= 0.45) setPageLoading(false);
+            }}
+            onLoadEnd={() => setPageLoading(false)}
+            onError={event => {
+              const description = event?.nativeEvent?.description || "Server se connection nahi ho paya.";
+              setPageLoading(false);
+              setLoadError(description);
+            }}
+            onHttpError={event => {
+              const status = Number(event?.nativeEvent?.statusCode || 0);
+              if (status >= 500) {
+                setPageLoading(false);
+                setLoadError(`Server error ${status}. Dobara try karein.`);
+              }
+            }}
+            onContentProcessDidTerminate={() => webRef.current?.reload()}
+            onRenderProcessGone={() => {
+              webRef.current?.reload();
+              return true;
+            }}
+          />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
     backgroundColor: "#087fbf"
   },
-  container: {
+  webContainer: {
+    flex: 1,
+    backgroundColor: "#eef7fd"
+  },
+  webViewContainer: {
     flex: 1,
     backgroundColor: "#eef7fd"
   },
@@ -265,28 +216,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#eef7fd"
   },
-  updateBanner: {
-    minHeight: 38,
-    paddingHorizontal: 14,
+  statusBanner: {
+    minHeight: 34,
+    paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 9,
+    gap: 8,
     backgroundColor: "#075f91"
   },
-  updateText: {
+  statusText: {
     color: "#ffffff",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700"
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 20,
-    elevation: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 28,
-    backgroundColor: "#eef7fd"
   },
   logoBox: {
     width: 86,
@@ -295,9 +237,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#0b82c2",
-    shadowColor: "#075f91",
-    shadowOpacity: Platform.OS === "ios" ? 0.22 : 0,
-    shadowRadius: 14,
     elevation: 7
   },
   logoText: {
@@ -305,22 +244,6 @@ const styles = StyleSheet.create({
     fontSize: 52,
     lineHeight: 58,
     fontWeight: "900"
-  },
-  loadingTitle: {
-    marginTop: 20,
-    color: "#253241",
-    fontSize: 24,
-    fontWeight: "900",
-    textAlign: "center"
-  },
-  spinner: {
-    marginTop: 24
-  },
-  loadingText: {
-    marginTop: 14,
-    color: "#687785",
-    fontSize: 14,
-    textAlign: "center"
   },
   errorScreen: {
     flex: 1,
