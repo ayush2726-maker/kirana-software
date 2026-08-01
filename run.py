@@ -45,6 +45,8 @@ import backend.customer_link_fix_ext  # noqa: F401
 import backend.customer_product_ui_ext  # noqa: F401
 # Final browser shell: billing controls, security, customer orders and SaaS UI.
 import backend.ui_shell_v2_ext  # noqa: F401
+# One-time secure recovery for a forgotten owner PIN.
+import backend.owner_recovery_ext  # noqa: F401
 # Outermost stable responses for / and /customer, bypassing middleware conflicts.
 import backend.frontend_rescue_ext  # noqa: F401
 
