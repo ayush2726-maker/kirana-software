@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 import backend.app as app_module
 import backend.customer_catalog_dedupe_ext  # noqa: F401
+import backend.customer_catalog_visibility_ext as visibility_module
 import backend.order_portal_ext as order_module
 
 
@@ -12,6 +13,7 @@ def test_customer_catalog_merges_duplicate_items_and_hides_stock(tmp_path: Path)
     app_module.DB_PATH = tmp_path / "customer-catalog-dedupe.db"
     app_module.init_db()
     order_module.ensure_order_schema()
+    visibility_module.ensure_catalog_visibility_schema()
     client = TestClient(app_module.app)
 
     setup = client.post(
@@ -25,6 +27,7 @@ def test_customer_catalog_merges_duplicate_items_and_hides_stock(tmp_path: Path)
         },
     )
     assert setup.status_code == 200, setup.text
+    owner_headers = {"Authorization": f"Bearer {setup.json()['token']}"}
 
     now = app_module.now_iso()
     with app_module.db() as conn:
@@ -152,6 +155,13 @@ def test_customer_catalog_merges_duplicate_items_and_hides_stock(tmp_path: Path)
             """,
             (business_id, party_id, duplicate_one, 72, now, now),
         )
+
+    show_all = client.post(
+        "/api/customer-catalog/visibility/bulk",
+        headers=owner_headers,
+        json={"action": "show_all"},
+    )
+    assert show_all.status_code == 200, show_all.text
 
     response = client.get(
         "/api/customer/catalog",
