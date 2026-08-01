@@ -11,6 +11,10 @@ on:
       - ".github/workflows/owner-ui-smoke.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   owner-ui-smoke:
     runs-on: ubuntu-latest
@@ -19,6 +23,19 @@ jobs:
       KIRANA_DB_PATH: ${{ runner.temp }}/kirana-owner-ui.db
       OWNER_UI_ARTIFACT_DIR: test-artifacts
     steps:
+      - name: Mark owner UI test pending
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'pending',
+              context: 'owner-ui-smoke',
+              description: 'Running mobile owner workflow test'
+            });
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -50,6 +67,34 @@ jobs:
 
       - name: Run mobile browser workflow
         run: python tests/owner_ui_smoke.py
+
+      - name: Mark owner UI test successful
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              context: 'owner-ui-smoke',
+              description: 'Login, navigation, item, party and sale passed'
+            });
+
+      - name: Mark owner UI test failed
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'failure',
+              context: 'owner-ui-smoke',
+              description: 'Mobile owner workflow test failed'
+            });
 
       - name: Upload test diagnostics
         if: always()
