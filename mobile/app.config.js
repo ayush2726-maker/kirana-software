@@ -6,7 +6,7 @@ const expo = {
   name: "Kirana Software Mobile",
   slug: "kirana-software-mobile",
   owner: "ayush2726",
-  version: "1.0.1",
+  version: "1.0.2",
   orientation: "portrait",
   userInterfaceStyle: "light",
   backgroundColor: "#eef7fd",
@@ -23,7 +23,7 @@ const expo = {
   },
   android: {
     package: ANDROID_PACKAGE,
-    versionCode: 3,
+    versionCode: 4,
     edgeToEdgeEnabled: true,
     softwareKeyboardLayoutMode: "resize",
     permissions: ["INTERNET"],
@@ -34,7 +34,7 @@ const expo = {
   },
   ios: {
     bundleIdentifier: ANDROID_PACKAGE,
-    buildNumber: "3",
+    buildNumber: "4",
     supportsTablet: true
   },
   extra: {
