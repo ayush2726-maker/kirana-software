@@ -13,6 +13,7 @@ on:
       - 'mobile/app.config.js'
       - 'mobile/eas.json'
       - 'scripts/generate-mobile-assets.js'
+      - 'plugins/withNativeKiranaActivityV2.js'
       - '.eas/workflows/build-mobile-apk.yml'
 
 concurrency:
@@ -30,4 +31,4 @@ jobs:
     params:
       platform: android
       profile: preview
-      message: Kirana Software Mobile 1.0.2 Chrome Engine APK
+      message: Kirana Software Mobile 1.0.3 Full Screen Native APK
