@@ -10,7 +10,44 @@ from backend.saas_ext import ensure_saas_schema
 from backend.ui_shell_v2_ext import BATCH_REMOVE_CARD, DUPLICATE_CARD
 
 
-FRONTEND_VERSION = "067"
+FRONTEND_VERSION = "068"
+
+
+HTML_ENGLISH_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("Billing, Stock aur Khata — Sab Ek Jagah", "Billing, Inventory & Accounts — All in One"),
+    ("Apni dukaan shuru karein", "Set Up Your Business"),
+    ("Dukaan ka naam", "Business Name"),
+    ("Apni Dukaan Ka Account Banayein", "Create Your Business Account"),
+    ("30 din free trial · Alag customer order link · Koi card nahi", "30-day free trial · Separate customer ordering link · No card required"),
+    ("Parties & Khata", "Parties & Accounts"),
+    ("PARTY KHATA", "PARTY ACCOUNT"),
+    ("Customer receivable aur supplier payable", "Customer receivables and supplier payables"),
+    ("CSV ya Excel upload karke preview aur import karein", "Upload a CSV or Excel file to preview and import"),
+    ("Vyapar export file choose karein", "Choose a Vyapar export file"),
+    ("Product master pehle upload karein.", "Upload the product master first."),
+    ("Customers aur suppliers import karein.", "Import customers and suppliers."),
+    ("Invoice line reports upload karein.", "Upload invoice line reports."),
+    ("Stock aur outstanding compare karein.", "Compare stock and outstanding balances."),
+    ("Sale minus purchase total. Exact item-wise cost history se calculation aur accurate hogi.", "Sales minus purchases. Accuracy improves with item-level cost history."),
+    ("Data ko phone/laptop par safe rakhein", "Keep your data safely on your phone or laptop"),
+    ("Automatic duplicate check optional hai. Direct import remove karne ke liye neeche Sales Import Batches use karein.", "Automatic duplicate checking is optional. Use Sales Import Batches below to remove an imported batch directly."),
+    ("Galat item-wise SaleReport ko direct remove karein. Sirf selected import batch delete hoga.", "Remove an incorrect item-wise SaleReport import directly. Only the selected import batch will be deleted."),
+    ("Sales import batches load ho rahe hain…", "Loading sales import batches..."),
+    ("Dukaan ka customer link galat hai", "The customer link is invalid"),
+    ("Database wala mobile number", "Registered mobile number"),
+    ("WhatsApp OTP Request Karein", "Request WhatsApp OTP"),
+    ("Request dukaan ko jayegi. Dukaan WhatsApp par OTP bhejegi.", "The request will go to the business. The business will send the OTP on WhatsApp."),
+    ("Product search karein", "Search products"),
+    ("Cart me Add", "Add to Cart"),
+    ("Order Request", "Request Order"),
+    ("Current Rate", "Your Rate"),
+)
+
+
+def apply_english_ui(html: str) -> str:
+    for old, new in HTML_ENGLISH_REPLACEMENTS:
+        html = html.replace(old, new)
+    return html
 
 
 def no_cache_headers() -> dict[str, str]:
@@ -51,18 +88,18 @@ OWNER_BOOT_GUARD = r"""
       note.style.cssText = 'margin:0 0 12px;padding:10px 12px;border-radius:10px;background:#fff4d6;color:#6d4b00;font-size:13px;font-weight:700;';
       login.prepend(note);
     }
-    note.textContent = message || 'App loading retry hua. Login karein.';
+    note.textContent = message || 'The app retried loading. Please sign in.';
   };
 
   window.addEventListener('error', event => {
     if (String(event?.filename || '').includes('owner-core.js')) {
-      forceLoginVisible('App script load nahi hua. Page reload karein.');
+      forceLoginVisible('The app script did not load. Reload the page.');
     }
   });
   window.addEventListener('unhandledrejection', () => {
-    setTimeout(() => forceLoginVisible('App startup mein dikkat aayi. Login screen restore ki gayi.'), 100);
+    setTimeout(() => forceLoginVisible('The app had a startup error. The login screen was restored.'), 100);
   });
-  setTimeout(() => forceLoginVisible('App load nahi hui, login screen restore kar di gayi.'), 4000);
+  setTimeout(() => forceLoginVisible('The app did not load. The login screen was restored.'), 4000);
 })();
 </script>
 """
@@ -118,7 +155,9 @@ def owner_html() -> str:
     )
     html = html.replace(
         '<script src="/app.js?v=040"></script>',
-        OWNER_BOOT_GUARD + f'<script src="/owner-core.js?v={FRONTEND_VERSION}"></script>',
+        f'<script src="/owner-login-rescue.js?v={FRONTEND_VERSION}"></script>'
+        + OWNER_BOOT_GUARD
+        + f'<script src="/owner-core.js?v={FRONTEND_VERSION}"></script>',
         1,
     )
     html = html.replace(
@@ -134,17 +173,31 @@ def owner_html() -> str:
         '<script src="/order-center.js?v=060"></script>'
         '<script src="/customer-link-fix.js?v=063"></script>'
         '<script src="/customer-otp-owner.js?v=062"></script>'
-        '<script src="/saas-onboarding.js?v=062"></script></body>',
+        '<script src="/saas-onboarding.js?v=062"></script>'
+        f'<script src="/english-ui.js?v={FRONTEND_VERSION}"></script></body>',
         1,
     )
-    return html
+    return apply_english_ui(html)
 
 
 def customer_html() -> str:
     html = customer_registration_html()
     html = html.replace("/customer-order.js?v=060", f"/customer-order.js?v={FRONTEND_VERSION}")
     html = html.replace("/customer-order.css?v=060", f"/customer-order.css?v={FRONTEND_VERSION}")
-    return html
+    html = html.replace(
+        "</body>",
+        f'<script src="/english-ui.js?v={FRONTEND_VERSION}"></script></body>',
+        1,
+    )
+    return apply_english_ui(html)
+
+
+def static_javascript(filename: str) -> Response:
+    return Response(
+        content=(STATIC_DIR / filename).read_text(encoding="utf-8"),
+        media_type="application/javascript",
+        headers=no_cache_headers(),
+    )
 
 
 @app.get("/owner-core.js", include_in_schema=False)
@@ -165,6 +218,16 @@ def raw_owner_core_stylesheet() -> Response:
     )
 
 
+@app.get("/owner-login-rescue.js", include_in_schema=False)
+def owner_login_rescue_javascript() -> Response:
+    return static_javascript("owner-login-rescue.js")
+
+
+@app.get("/english-ui.js", include_in_schema=False)
+def english_ui_javascript() -> Response:
+    return static_javascript("english-ui.js")
+
+
 @app.middleware("http")
 async def stable_frontend_routes(request: Request, call_next):
     if request.method != "GET":
@@ -183,6 +246,10 @@ async def stable_frontend_routes(request: Request, call_next):
             media_type="text/css",
             headers=no_cache_headers(),
         )
+    if path == "/owner-login-rescue.js":
+        return static_javascript("owner-login-rescue.js")
+    if path == "/english-ui.js":
+        return static_javascript("english-ui.js")
     if path == "/":
         return HTMLResponse(owner_html(), headers=no_cache_headers())
 
@@ -203,7 +270,12 @@ async def stable_frontend_routes(request: Request, call_next):
 # line of defence; the outer middleware serves them directly in production.
 _owner_asset_routes = [
     route for route in list(app.router.routes)
-    if getattr(route, "path", None) in {"/owner-core.js", "/owner-core.css"}
+    if getattr(route, "path", None) in {
+        "/owner-core.js",
+        "/owner-core.css",
+        "/owner-login-rescue.js",
+        "/english-ui.js",
+    }
 ]
 for route in _owner_asset_routes:
     app.router.routes.remove(route)
