@@ -1,10 +1,11 @@
 const APP_URL = process.env.EXPO_PUBLIC_APP_URL || "https://web-production-02514.up.railway.app";
-const PROJECT_ID = (process.env.EXPO_PROJECT_ID || "").trim();
+const PROJECT_ID = "97bba2a7-cef9-4902-aa87-e6651d4b5156";
 const ANDROID_PACKAGE = process.env.EXPO_ANDROID_PACKAGE || "com.kiranasoftware.mobile";
 
 const expo = {
   name: "Kirana Software Mobile",
   slug: "kirana-software-mobile",
+  owner: "ayush2726",
   version: "1.0.0",
   orientation: "portrait",
   userInterfaceStyle: "light",
@@ -16,32 +17,27 @@ const expo = {
   },
   android: {
     package: ANDROID_PACKAGE,
-    versionCode: 1,
+    versionCode: 2,
     edgeToEdgeEnabled: true,
-    permissions: ["INTERNET"],
-    adaptiveIcon: {
-      backgroundColor: "#0b82c2"
-    }
+    permissions: ["INTERNET"]
   },
   ios: {
     bundleIdentifier: ANDROID_PACKAGE,
-    buildNumber: "1",
+    buildNumber: "2",
     supportsTablet: true
   },
   extra: {
     appUrl: APP_URL,
-    eas: PROJECT_ID ? { projectId: PROJECT_ID } : undefined
+    eas: {
+      projectId: PROJECT_ID
+    }
   },
-  updates: PROJECT_ID
-    ? {
-        url: `https://u.expo.dev/${PROJECT_ID}`,
-        enabled: true,
-        checkAutomatically: "ON_LOAD",
-        fallbackToCacheTimeout: 0
-      }
-    : {
-        enabled: false
-      }
+  updates: {
+    url: `https://u.expo.dev/${PROJECT_ID}`,
+    enabled: true,
+    checkAutomatically: "ON_LOAD",
+    fallbackToCacheTimeout: 0
+  }
 };
 
 module.exports = { expo };
