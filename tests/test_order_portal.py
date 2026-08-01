@@ -3,6 +3,8 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 import backend.app as app_module
+import backend.customer_catalog_dedupe_ext  # noqa: F401
+import backend.customer_catalog_visibility_ext as visibility_module
 import backend.order_portal_ext as order_module
 
 
@@ -32,6 +34,7 @@ def test_customer_order_uses_last_bill_then_fixed_rate_and_converts_to_sale(tmp_
     app_module.DB_PATH = tmp_path / "orders.db"
     app_module.init_db()
     order_module.ensure_order_schema()
+    visibility_module.ensure_catalog_visibility_schema()
     client = TestClient(app_module.app)
     owner_token = setup_business(client)
     headers = owner_headers(owner_token)
@@ -64,6 +67,16 @@ def test_customer_order_uses_last_bill_then_fixed_rate_and_converts_to_sale(tmp_
     )
     assert item_response.status_code == 200, item_response.text
     item_id = item_response.json()["id"]
+
+    manage = client.get("/api/customer-catalog/manage", headers=headers)
+    assert manage.status_code == 200, manage.text
+    product = next(row for row in manage.json()["products"] if row["item_id"] == item_id)
+    allowed = client.put(
+        "/api/customer-catalog/visibility",
+        headers=headers,
+        json={"catalog_key": product["catalog_key"], "is_visible": True},
+    )
+    assert allowed.status_code == 200, allowed.text
 
     previous_sale = client.post(
         "/api/sales",
