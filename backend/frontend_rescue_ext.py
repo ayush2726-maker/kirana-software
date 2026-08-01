@@ -10,7 +10,7 @@ from backend.saas_ext import ensure_saas_schema
 from backend.ui_shell_v2_ext import BATCH_REMOVE_CARD, DUPLICATE_CARD
 
 
-FRONTEND_VERSION = "066"
+FRONTEND_VERSION = "067"
 
 
 def no_cache_headers() -> dict[str, str]:
@@ -68,6 +68,16 @@ OWNER_BOOT_GUARD = r"""
 """
 
 
+def fixed_owner_core() -> str:
+    core = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+    # Keep this explicit repair until the base bundle is regenerated. The
+    # original compressed line relied on automatic semicolon insertion and
+    # was unreliable in some Android browser builds.
+    broken = "if(metaEl)metaEl.textContent=`${line.size?`${line.size} · `:''}${line.unit||'pcs'} · GST ${line.gst_rate}%`}updateCartTotals(k)}"
+    repaired = "if(metaEl){metaEl.textContent=`${line.size?`${line.size} · `:''}${line.unit||'pcs'} · GST ${line.gst_rate}%`;}updateCartTotals(k)}"
+    return core.replace(broken, repaired, 1)
+
+
 def owner_html() -> str:
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
     history_card = '<article class="card"><div class="section-title"><h2>Import History</h2></div><div id="import-history" class="simple-list"></div></article>'
@@ -80,9 +90,22 @@ def owner_html() -> str:
             cleanup_area + '<div id="import-history" class="simple-list"></div>',
             1,
         )
+
+    # Never ship a page where both the auth screen and app shell start hidden.
+    # Login is visible immediately; the core script switches to setup/dashboard.
+    html = html.replace(
+        '<section id="auth-screen" class="auth-screen hidden">',
+        '<section id="auth-screen" class="auth-screen">',
+        1,
+    )
+    html = html.replace(
+        '<div id="login-box" class="hidden">',
+        '<div id="login-box">',
+        1,
+    )
     html = html.replace(
         "/styles.css?v=040",
-        f"/styles.css?v={FRONTEND_VERSION}",
+        f"/owner-core.css?v={FRONTEND_VERSION}",
         1,
     )
     html = html.replace(
@@ -93,8 +116,6 @@ def owner_html() -> str:
         '<link rel="stylesheet" href="/saas-onboarding.css?v=062" /></head>',
         1,
     )
-    # Bypass backend.items_ext's wrapped /app.js response. The raw owner core
-    # is served below with strict no-cache headers to avoid Android stale PWA assets.
     html = html.replace(
         '<script src="/app.js?v=040"></script>',
         OWNER_BOOT_GUARD + f'<script src="/owner-core.js?v={FRONTEND_VERSION}"></script>',
@@ -129,8 +150,17 @@ def customer_html() -> str:
 @app.get("/owner-core.js", include_in_schema=False)
 def raw_owner_core_javascript() -> Response:
     return Response(
-        content=(STATIC_DIR / "app.js").read_text(encoding="utf-8"),
+        content=fixed_owner_core(),
         media_type="application/javascript",
+        headers=no_cache_headers(),
+    )
+
+
+@app.get("/owner-core.css", include_in_schema=False)
+def raw_owner_core_stylesheet() -> Response:
+    return Response(
+        content=(STATIC_DIR / "styles.css").read_text(encoding="utf-8"),
+        media_type="text/css",
         headers=no_cache_headers(),
     )
 
@@ -141,6 +171,18 @@ async def stable_frontend_routes(request: Request, call_next):
         return await call_next(request)
 
     path = request.url.path.rstrip("/") or "/"
+    if path == "/owner-core.js":
+        return Response(
+            content=fixed_owner_core(),
+            media_type="application/javascript",
+            headers=no_cache_headers(),
+        )
+    if path == "/owner-core.css":
+        return Response(
+            content=(STATIC_DIR / "styles.css").read_text(encoding="utf-8"),
+            media_type="text/css",
+            headers=no_cache_headers(),
+        )
     if path == "/":
         return HTMLResponse(owner_html(), headers=no_cache_headers())
 
@@ -157,10 +199,11 @@ async def stable_frontend_routes(request: Request, call_next):
     return await call_next(request)
 
 
-# Ensure the raw core asset route is evaluated before backend.app's SPA fallback.
+# Keep rescue assets ahead of backend.app's generic SPA fallback as a second
+# line of defence; the outer middleware serves them directly in production.
 _owner_asset_routes = [
     route for route in list(app.router.routes)
-    if getattr(route, "path", None) == "/owner-core.js"
+    if getattr(route, "path", None) in {"/owner-core.js", "/owner-core.css"}
 ]
 for route in _owner_asset_routes:
     app.router.routes.remove(route)
