@@ -27,6 +27,8 @@ import backend.import_batch_remove_ext  # noqa: F401
 import backend.password_change_ext  # noqa: F401
 # Customer self-ordering, customer-specific rates and order-to-bill conversion.
 import backend.order_portal_ext  # noqa: F401
+# Deletes corrupt imported items containing x00 control markers and blocks them in future imports.
+import backend.corrupt_x00_item_cleanup_ext  # noqa: F401
 # Multi-business SaaS signup, trial plans and unique shop links.
 import backend.saas_ext  # noqa: F401
 # Enforces trial expiry and seller-controlled suspension.
