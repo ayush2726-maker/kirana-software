@@ -59,6 +59,7 @@ async def serve_ui_shell_v2(request, call_next):
             '<script src="/import-batch-remove.js?v=051"></script>'
             '<script src="/password-change.js?v=052"></script>'
             '<script src="/order-center.js?v=060"></script>'
+            '<script src="/customer-link-fix.js?v=063"></script>'
             '<script src="/customer-otp-owner.js?v=062"></script>'
             '<script src="/saas-onboarding.js?v=062"></script></body>',
         )
