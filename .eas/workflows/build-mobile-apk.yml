@@ -30,4 +30,4 @@ jobs:
     params:
       platform: android
       profile: preview
-      message: Kirana Software Mobile 1.0.1 Touch Fix APK
+      message: Kirana Software Mobile 1.0.2 Chrome Engine APK
