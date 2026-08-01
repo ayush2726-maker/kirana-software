@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#087fbf" />
+  <meta name="description" content="Kirana Software owner billing app" />
+  <title>Kirana Software</title>
+  <link rel="stylesheet" href="/owner-stable.css?v=__OWNER_VERSION__" />
+</head>
+<body>
+  <div id="app-loading" class="app-loading">
+    <div class="loading-logo">K</div>
+    <strong>Kirana Software</strong>
+    <span>Loading your business...</span>
+  </div>
+
+  <div id="app" class="app hidden">
+    <header class="topbar">
+      <button class="topbar-logo" data-action="home" aria-label="Home">K</button>
+      <div class="topbar-title">
+        <strong id="business-name">Kirana Software</strong>
+        <small id="business-subtitle">Billing, Inventory & Accounts</small>
+      </div>
+      <button class="round-button" data-page="settings" aria-label="Settings">⚙</button>
+      <button id="profile-button" class="avatar-button" data-page="menu" aria-label="Menu">A</button>
+    </header>
+
+    <main class="main-content">
+      <section id="page-home" class="page active" data-page-name="home">
+        <div class="segment-row">
+          <button class="active">Transaction Details</button>
+          <button data-page="parties">Party Details</button>
+        </div>
+
+        <article class="card quick-card">
+          <h2>Quick Links</h2>
+          <div class="quick-grid">
+            <button data-page="sale"><span class="quick-icon sale">₹</span><b>Add Sale</b></button>
+            <button data-page="transactions"><span class="quick-icon">▤</span><b>Sales Report</b></button>
+            <button data-page="settings"><span class="quick-icon">⚙</span><b>Settings</b></button>
+            <button data-page="menu"><span class="quick-icon">›</span><b>Show All</b></button>
+          </div>
+        </article>
+
+        <label class="search-card">
+          <span>⌕</span>
+          <input id="activity-search" type="search" placeholder="Search transactions" autocomplete="off" />
+        </label>
+
+        <div id="activity-list" class="list-stack"></div>
+        <button class="primary-fab" data-page="sale"><span>₹</span> Add New Sale</button>
+      </section>
+
+      <section id="page-dashboard" class="page" data-page-name="dashboard">
+        <div class="page-heading"><div><small>OVERVIEW</small><h1>Dashboard</h1></div><button class="text-button" data-action="refresh-dashboard">Refresh</button></div>
+        <div class="stat-grid two">
+          <article class="stat-card positive"><small>You'll Get</small><strong id="dash-receivable">₹0.00</strong></article>
+          <article class="stat-card negative"><small>You'll Give</small><strong id="dash-payable">₹0.00</strong></article>
+          <article class="stat-card"><small>Sales This Month</small><strong id="dash-sales">₹0.00</strong></article>
+          <article class="stat-card"><small>Purchases This Month</small><strong id="dash-purchases">₹0.00</strong></article>
+          <article class="stat-card"><small>Cash In Hand</small><strong id="dash-cash">₹0.00</strong></article>
+          <article class="stat-card"><small>Stock Value</small><strong id="dash-stock">₹0.00</strong></article>
+        </div>
+        <article class="card">
+          <div class="card-title"><h2>Recent Activity</h2><button class="text-button" data-page="transactions">View All</button></div>
+          <div id="dashboard-activity" class="compact-list"></div>
+        </article>
+        <article class="card">
+          <div class="card-title"><h2>Low Stock</h2><button class="text-button" data-page="items">View Items</button></div>
+          <div id="dashboard-low-stock" class="compact-list"></div>
+        </article>
+      </section>
+
+      <section id="page-items" class="page" data-page-name="items">
+        <div class="page-heading"><div><small>INVENTORY</small><h1>Items</h1></div><button class="primary-small" data-action="new-item">+ Add Item</button></div>
+        <label class="search-card"><span>⌕</span><input id="item-search" type="search" placeholder="Search item, SKU or size" autocomplete="off" /></label>
+        <div class="filter-row"><button class="chip active" data-item-filter="all">All Items</button><button class="chip" data-item-filter="low">Low Stock</button></div>
+        <div id="items-list" class="list-stack"></div>
+      </section>
+
+      <section id="page-parties" class="page" data-page-name="parties">
+        <div class="page-heading"><div><small>ACCOUNTS</small><h1>Parties</h1></div><button class="primary-small" data-action="new-party">+ Add Party</button></div>
+        <label class="search-card"><span>⌕</span><input id="party-search" type="search" placeholder="Search party or mobile" autocomplete="off" /></label>
+        <div class="filter-row"><button class="chip active" data-party-filter="all">All</button><button class="chip" data-party-filter="customer">Customers</button><button class="chip" data-party-filter="supplier">Suppliers</button></div>
+        <div id="parties-list" class="list-stack"></div>
+      </section>
+
+      <section id="page-transactions" class="page" data-page-name="transactions">
+        <div class="page-heading"><div><small>HISTORY</small><h1>Transactions</h1></div><button class="primary-small" data-page="sale">+ New Sale</button></div>
+        <label class="search-card"><span>⌕</span><input id="transaction-search" type="search" placeholder="Search invoice or party" autocomplete="off" /></label>
+        <div class="filter-row"><button class="chip active" data-transaction-filter="all">All</button><button class="chip" data-transaction-filter="sale">Sales</button><button class="chip" data-transaction-filter="purchase">Purchases</button></div>
+        <div id="transactions-list" class="list-stack"></div>
+      </section>
+
+      <section id="page-sale" class="page" data-page-name="sale">
+        <div class="page-heading sticky-heading">
+          <button class="back-button" data-page="home">‹</button>
+          <div><small>BILLING</small><h1>New Sale</h1></div>
+          <button class="text-button" data-action="clear-sale">Clear</button>
+        </div>
+        <article class="card form-card">
+          <div class="form-grid two">
+            <label>Customer<select id="sale-party"><option value="">Cash / Walk-in Customer</option></select></label>
+            <label>Date<input id="sale-date" type="date" /></label>
+          </div>
+          <label>Search Item<input id="sale-item-search" type="search" placeholder="Type product name or SKU" autocomplete="off" /></label>
+          <div id="sale-item-results" class="search-results hidden"></div>
+        </article>
+        <div id="sale-lines" class="sale-lines"></div>
+        <article class="card summary-card">
+          <div><span>Subtotal</span><strong id="sale-subtotal">₹0.00</strong></div>
+          <label><span>Discount</span><input id="sale-discount" type="number" min="0" step="0.01" value="0" /></label>
+          <div><span>Tax</span><strong id="sale-tax">₹0.00</strong></div>
+          <div class="grand-total"><span>Total</span><strong id="sale-total">₹0.00</strong></div>
+          <div class="form-grid two">
+            <label>Payment<select id="sale-payment-mode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank</option><option value="card">Card</option><option value="credit">Credit</option></select></label>
+            <label>Paid Amount<input id="sale-paid" type="number" min="0" step="0.01" value="0" /></label>
+          </div>
+          <label>Notes<textarea id="sale-notes" rows="2" placeholder="Optional notes"></textarea></label>
+          <button id="save-sale" class="primary-wide" type="button">Save Sale</button>
+        </article>
+      </section>
+
+      <section id="page-orders" class="page" data-page-name="orders">
+        <div class="page-heading"><div><small>CUSTOMERS</small><h1>Orders</h1></div><button class="text-button" data-action="refresh-orders">Refresh</button></div>
+        <article class="card info-card">
+          <small>Customer ordering link</small>
+          <div class="copy-row"><input id="customer-link" readonly /><button data-action="copy-customer-link">Copy</button></div>
+        </article>
+        <div id="orders-list" class="list-stack"></div>
+      </section>
+
+      <section id="page-settings" class="page" data-page-name="settings">
+        <div class="page-heading"><div><small>BUSINESS</small><h1>Settings</h1></div></div>
+        <form id="business-form" class="card form-card">
+          <label>Business Name<input name="name" required /></label>
+          <div class="form-grid two">
+            <label>Owner Name<input name="owner_name" /></label>
+            <label>Mobile<input name="phone" inputmode="tel" /></label>
+          </div>
+          <label>GSTIN<input name="gstin" /></label>
+          <label>Address<textarea name="address" rows="3"></textarea></label>
+          <label>Invoice Prefix<input name="invoice_prefix" maxlength="8" /></label>
+          <button class="primary-wide" type="submit">Save Business Settings</button>
+        </form>
+        <article class="card">
+          <div class="menu-list">
+            <button data-page="orders"><span>🛒</span><div><b>Customer Orders</b><small>View orders and customer ordering link</small></div><i>›</i></button>
+            <button data-action="open-customer-link"><span>🔗</span><div><b>Open Customer App</b><small>Test the customer ordering page</small></div><i>›</i></button>
+            <button data-action="logout"><span>↪</span><div><b>Logout</b><small>Sign out of the owner app</small></div><i>›</i></button>
+          </div>
+        </article>
+      </section>
+
+      <section id="page-menu" class="page" data-page-name="menu">
+        <div class="page-heading"><div><small>ALL FEATURES</small><h1>Menu</h1></div></div>
+        <article class="card menu-list">
+          <button data-page="sale"><span>₹</span><div><b>New Sale</b><small>Create a customer bill</small></div><i>›</i></button>
+          <button data-page="transactions"><span>▤</span><div><b>Transactions</b><small>Sales and purchase history</small></div><i>›</i></button>
+          <button data-page="items"><span>□</span><div><b>Items & Stock</b><small>Products, rates and stock</small></div><i>›</i></button>
+          <button data-page="parties"><span>👥</span><div><b>Parties</b><small>Customers and suppliers</small></div><i>›</i></button>
+          <button data-page="orders"><span>🛒</span><div><b>Customer Orders</b><small>Online customer requests</small></div><i>›</i></button>
+          <button data-page="settings"><span>⚙</span><div><b>Settings</b><small>Business profile and account</small></div><i>›</i></button>
+        </article>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button class="active" data-page="home"><span>⌂</span><b>HOME</b></button>
+      <button data-page="dashboard"><span>▥</span><b>DASHBOARD</b></button>
+      <button data-page="items"><span>□</span><b>ITEMS</b></button>
+      <button data-page="menu"><span>☰</span><b>MENU</b></button>
+    </nav>
+  </div>
+
+  <div id="modal-backdrop" class="modal-backdrop hidden">
+    <section id="item-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="item-modal-title">
+      <header><div><small>INVENTORY</small><h2 id="item-modal-title">Add Item</h2></div><button data-action="close-modal">×</button></header>
+      <form id="item-form" class="modal-body">
+        <input type="hidden" name="id" />
+        <label>Item Name<input name="name" required /></label>
+        <div class="form-grid two">
+          <label>Size<input name="size" placeholder="500 gm" /></label>
+          <label>Unit<select name="unit"><option value="pcs">pcs</option><option value="kg">kg</option><option value="gm">gm</option><option value="ltr">ltr</option><option value="ml">ml</option><option value="packet">packet</option></select></label>
+          <label>SKU<input name="sku" /></label>
+          <label>Category<input name="category" /></label>
+          <label>Sale Price<input name="sale_price" type="number" min="0" step="0.01" value="0" /></label>
+          <label>Purchase Price<input name="purchase_price" type="number" min="0" step="0.01" value="0" /></label>
+          <label>Stock<input name="stock" type="number" step="0.01" value="0" /></label>
+          <label>Minimum Stock<input name="min_stock" type="number" step="0.01" value="0" /></label>
+          <label>GST %<input name="gst_rate" type="number" min="0" step="0.01" value="0" /></label>
+          <label>MRP<input name="mrp" type="number" min="0" step="0.01" value="0" /></label>
+        </div>
+        <input type="hidden" name="barcode" value="" />
+        <input type="hidden" name="hsn" value="" />
+        <button class="primary-wide" type="submit">Save Item</button>
+      </form>
+    </section>
+
+    <section id="party-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="party-modal-title">
+      <header><div><small>ACCOUNT</small><h2 id="party-modal-title">Add Party</h2></div><button data-action="close-modal">×</button></header>
+      <form id="party-form" class="modal-body">
+        <input type="hidden" name="id" />
+        <label>Party Name<input name="name" required /></label>
+        <div class="form-grid two">
+          <label>Type<select name="type"><option value="customer">Customer</option><option value="supplier">Supplier</option><option value="both">Both</option></select></label>
+          <label>Mobile<input name="phone" inputmode="tel" /></label>
+          <label>Opening Balance<input name="opening_balance" type="number" step="0.01" value="0" /></label>
+          <label>GSTIN<input name="gstin" /></label>
+        </div>
+        <label>Address<textarea name="address" rows="3"></textarea></label>
+        <button class="primary-wide" type="submit">Save Party</button>
+      </form>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/owner-stable.js?v=__OWNER_VERSION__"></script>
+</body>
+</html>
