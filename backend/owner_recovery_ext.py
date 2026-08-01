@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from backend.app import app, db, hash_password, now_iso
 
 
-RECOVERY_CODE_HASH = "d7766959b74ac731e971e19f50d58973ca2f34bd9ad0df550d2dd334d6fdd295"
+RECOVERY_CODE_HASH = "65627589679c2361740dbe75a96c3e6285fde97edebc4f2c4f3e04940421b00f"
 RECOVERY_EXPIRES_AT = "2026-08-03T00:00:00"
 
 
@@ -65,7 +65,7 @@ def owner_recovery_page(code: str = Query(default="")) -> HTMLResponse:
         return HTMLResponse(
             """<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>
             <style>body{font-family:Arial;background:#eef7fd;padding:28px;color:#243242}.box{max-width:430px;margin:70px auto;background:#fff;padding:28px;border-radius:20px;box-shadow:0 12px 36px #0b7bc122}h2{margin-top:0;color:#b42318}</style></head>
-            <body><div class='box'><h2>Reset link invalid ya use ho chuka hai</h2><p>Naya recovery link banana padega.</p></div></body></html>""",
+            <body><div class='box'><h2>The reset link is invalid or has already been used</h2><p>A new recovery link is required.</p></div></body></html>""",
             status_code=403,
             headers={"Cache-Control": "no-store"},
         )
@@ -79,11 +79,11 @@ def owner_recovery_page(code: str = Query(default="")) -> HTMLResponse:
 .card{{max-width:460px;margin:105px auto 30px;background:#fff;border-radius:24px;padding:28px;box-shadow:0 18px 50px #073b5d35}}
 h1{{margin:0 0 8px;font-size:30px}}p{{color:#667684;line-height:1.5}}label{{display:block;font-weight:700;margin-top:18px}}input{{width:100%;margin-top:8px;padding:15px;border:2px solid #d6e1e8;border-radius:14px;font-size:18px}}button{{width:100%;margin-top:22px;padding:16px;border:0;border-radius:14px;background:#0b82c2;color:#fff;font-size:18px;font-weight:800}}#msg{{margin-top:16px;padding:12px;border-radius:12px;display:none}}.ok{{display:block!important;background:#e7f8ee;color:#157347}}.err{{display:block!important;background:#ffe9e7;color:#b42318}}
 </style></head>
-<body><main class='card'><h1>Owner PIN Reset</h1><p>Admin account ke liye naya PIN set karein. Ye link sirf ek baar chalega.</p>
-<form id='reset-form'><label>Username<input name='username' value='admin' required></label><label>Naya PIN / Password<input name='new_password' type='password' minlength='4' required autocomplete='new-password'></label><label>PIN dobara dalein<input name='confirm_password' type='password' minlength='4' required autocomplete='new-password'></label><button type='submit'>Naya PIN Save Karein</button></form><div id='msg'></div></main>
+<body><main class='card'><h1>Owner PIN Reset</h1><p>Set a new PIN for the admin account. This secure link works only once.</p>
+<form id='reset-form'><label>Username<input name='username' value='admin' required></label><label>New PIN / Password<input name='new_password' type='password' minlength='4' required autocomplete='new-password' inputmode='numeric'></label><label>Confirm PIN<input name='confirm_password' type='password' minlength='4' required autocomplete='new-password' inputmode='numeric'></label><button type='submit'>Save New PIN</button></form><div id='msg'></div></main>
 <script>
 const code='{safe_code}';
-document.querySelector('#reset-form').addEventListener('submit',async e=>{{e.preventDefault();const f=new FormData(e.target),p=f.get('new_password'),c=f.get('confirm_password'),msg=document.querySelector('#msg');if(p!==c){{msg.className='err';msg.textContent='Dono PIN same nahi hain';return}}try{{const r=await fetch('/api/owner-recovery/reset',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{code,username:f.get('username'),new_password:p}})}});const d=await r.json().catch(()=>({{}}));if(!r.ok)throw new Error(d.detail||'Reset fail');msg.className='ok';msg.textContent='PIN reset ho gaya. Ab owner login page khul raha hai…';setTimeout(()=>location.href='/?recovered=1',1200)}}catch(err){{msg.className='err';msg.textContent=err.message}}}});
+document.querySelector('#reset-form').addEventListener('submit',async e=>{{e.preventDefault();const f=new FormData(e.target),p=f.get('new_password'),c=f.get('confirm_password'),msg=document.querySelector('#msg');if(p!==c){{msg.className='err';msg.textContent='Both PIN entries must match.';return}}try{{const r=await fetch('/api/owner-recovery/reset',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{code,username:f.get('username'),new_password:p}})}});const d=await r.json().catch(()=>({{}}));if(!r.ok)throw new Error(d.detail||'Reset failed');msg.className='ok';msg.textContent='PIN reset successfully. Opening the owner login page...';setTimeout(()=>location.href='/?recovered=1&v=068',1200)}}catch(err){{msg.className='err';msg.textContent=err.message}}}});
 </script></body></html>"""
     return HTMLResponse(html, headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
@@ -91,13 +91,13 @@ document.querySelector('#reset-form').addEventListener('submit',async e=>{{e.pre
 @app.post("/api/owner-recovery/reset")
 def owner_recovery_reset(payload: OwnerRecoveryIn) -> dict[str, bool]:
     if not recovery_available(payload.code):
-        raise HTTPException(status_code=403, detail="Recovery link invalid, expired ya use ho chuka hai")
+        raise HTTPException(status_code=403, detail="The recovery link is invalid, expired, or already used")
 
     username = payload.username.strip().lower()
     with db() as conn:
         row = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
         if not row:
-            raise HTTPException(status_code=404, detail="Owner username nahi mila")
+            raise HTTPException(status_code=404, detail="Owner username was not found")
         conn.execute(
             "UPDATE users SET password_hash=? WHERE id=?",
             (hash_password(payload.new_password), row["id"]),
