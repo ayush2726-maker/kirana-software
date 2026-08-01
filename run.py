@@ -1,6 +1,8 @@
 import os
 import uvicorn
 
+# Public health endpoint used by Railway deployments.
+import backend.health_ext  # noqa: F401
 # Registers advanced settings, reminders, users and injected settings assets.
 import backend.settings_ext  # noqa: F401
 # Groups repeated product names into one item card with separate size variants.
