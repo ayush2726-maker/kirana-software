@@ -1,0 +1,28 @@
+{
+  "name": "kirana-software-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start -c",
+    "android": "expo start --android",
+    "doctor": "npx expo-doctor@latest",
+    "build:apk": "eas build --platform android --profile preview",
+    "build:aab": "eas build --platform android --profile production",
+    "update:production": "eas update --channel production",
+    "update:preview": "eas update --channel preview"
+  },
+  "dependencies": {
+    "expo": "~57.0.1",
+    "expo-updates": "~57.0.0",
+    "react": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-webview": "13.16.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}
