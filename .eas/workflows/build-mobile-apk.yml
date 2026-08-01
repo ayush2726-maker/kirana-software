@@ -1,0 +1,32 @@
+name: Build Kirana Android APK
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'package.json'
+      - 'app.config.js'
+      - 'eas.json'
+      - 'babel.config.js'
+      - 'index.js'
+      - 'mobile/package.json'
+      - 'mobile/app.config.js'
+      - 'mobile/eas.json'
+      - '.eas/workflows/build-mobile-apk.yml'
+
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+defaults:
+  image: sdk-57
+
+jobs:
+  build_android_apk:
+    name: Build installable Android APK
+    type: build
+    environment: production
+    params:
+      platform: android
+      profile: preview
+      message: Kirana Software Mobile 1.0.0 APK
