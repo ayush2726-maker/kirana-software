@@ -49,8 +49,10 @@ import backend.ui_shell_v2_ext  # noqa: F401
 import backend.owner_recovery_ext  # noqa: F401
 # Stable responses for / and /customer, bypassing middleware conflicts.
 import backend.frontend_rescue_ext  # noqa: F401
-# Outermost standalone owner login with secure cookie-backed sessions.
+# Standalone owner login with secure cookie and local-storage session handoff.
 import backend.owner_session_ext  # noqa: F401
+# Outermost syntax-correct owner dashboard JavaScript response.
+import backend.owner_core_fix_ext  # noqa: F401
 
 # The barcode/theme extension is temporarily disabled because its injected
 # browser bundle caused a blank screen on some Android Chrome/WebView builds.
