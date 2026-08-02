@@ -1,0 +1,32 @@
+name: Owner Bundle Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/owner_self_contained_ext.py"
+      - "backend/owner_boot_recovery_ext.py"
+      - "backend/stable_owner_app_ext.py"
+      - "static/owner-*.js"
+      - "static/owner-*.css"
+      - "static/owner-stable.html"
+      - "tests/owner_bundle_syntax.py"
+      - ".github/workflows/owner-bundle-check.yml"
+  workflow_dispatch:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Check generated owner bundle
+        run: python tests/owner_bundle_syntax.py
