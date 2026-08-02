@@ -1,0 +1,180 @@
+.customer-otp-panel {
+  margin-top: 18px;
+  padding: 22px;
+}
+
+.customer-otp-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.customer-otp-heading small {
+  color: #0a789f;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.customer-otp-heading h2 {
+  margin: 4px 0;
+  color: #26384b;
+  font-size: 1.5rem;
+}
+
+.customer-otp-heading p {
+  margin: 0;
+  color: #6b7885;
+  line-height: 1.4;
+}
+
+.customer-otp-heading button {
+  flex: 0 0 auto;
+  border: 1px solid #0b8fbd;
+  border-radius: 14px;
+  background: #fff;
+  color: #087faa;
+  padding: 11px 16px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.customer-otp-list {
+  display: grid;
+  gap: 14px;
+}
+
+.customer-otp-card {
+  border: 1px solid #c8dae4;
+  border-radius: 18px;
+  background: #f8fcff;
+  padding: 16px;
+}
+
+.customer-otp-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.customer-otp-main h3 {
+  margin: 0;
+  color: #27384a;
+  font-size: 1.12rem;
+}
+
+.customer-otp-main p {
+  margin: 4px 0;
+  color: #4f5e6d;
+  font-weight: 700;
+}
+
+.customer-otp-main small {
+  color: #788592;
+}
+
+.customer-otp-code {
+  min-width: 112px;
+  border-radius: 16px;
+  background: #e3f5fc;
+  padding: 10px 14px;
+  text-align: center;
+}
+
+.customer-otp-code small {
+  display: block;
+  color: #087faa;
+  font-weight: 800;
+}
+
+.customer-otp-code strong {
+  display: block;
+  margin-top: 2px;
+  color: #15384a;
+  font-size: 1.45rem;
+  letter-spacing: .08em;
+}
+
+.customer-otp-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.customer-otp-actions button {
+  min-height: 46px;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.customer-otp-whatsapp {
+  border: 0;
+  background: #128c7e;
+  color: #fff;
+}
+
+.customer-otp-cancel {
+  border: 1px solid #cf4052;
+  background: #fff;
+  color: #b82b3d;
+}
+
+.customer-otp-empty {
+  border: 1px dashed #bed0da;
+  border-radius: 16px;
+  padding: 28px 16px;
+  text-align: center;
+  color: #71808d;
+}
+
+.customer-otp-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #e9344d;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 900;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.customer-otp-badge.hidden {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .customer-otp-panel {
+    padding: 18px;
+  }
+
+  .customer-otp-heading,
+  .customer-otp-main {
+    align-items: stretch;
+  }
+
+  .customer-otp-heading {
+    flex-direction: column;
+  }
+
+  .customer-otp-heading button {
+    width: 100%;
+  }
+
+  .customer-otp-main {
+    align-items: center;
+  }
+
+  .customer-otp-actions {
+    grid-template-columns: 1fr;
+  }
+}
