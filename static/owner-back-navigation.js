@@ -40,6 +40,7 @@
   }
 
   function closeOpenLayer() {
+    if (window.KiranaCustomerCatalog && window.KiranaCustomerCatalog.handleBack && window.KiranaCustomerCatalog.handleBack()) return true;
     if (window.KiranaBulkItems && window.KiranaBulkItems.handleBack && window.KiranaBulkItems.handleBack()) return true;
 
     var txnForm = one('#txn-form-screen');
