@@ -73,6 +73,8 @@ import backend.customer_login_race_fix_ext  # noqa: F401
 import backend.customer_registration_reset_ext  # noqa: F401
 # Prevents the native owner app from remaining forever on the loading screen.
 import backend.owner_boot_recovery_ext  # noqa: F401
+# Final owner delivery: inline every local CSS/JS asset into one HTML response.
+import backend.owner_self_contained_ext  # noqa: F401
 
 # Disabled: this response-rewrapping middleware caused Railway upstream errors.
 # import backend.owner_dashboard_session_ext  # noqa: F401
