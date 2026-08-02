@@ -15,6 +15,8 @@ import backend.sale_import_ext  # noqa: F401
 import backend.vyapar_exact_ext  # noqa: F401
 # Shows sale/purchase/other entries in a date-wise mixed timeline and fixes menu navigation.
 import backend.activity_navigation_ext  # noqa: F401
+# Opens sale, purchase, return, payment, expense and document details from transaction lists.
+import backend.transaction_detail_ext  # noqa: F401
 # Groups every invoice's item rows, detects old item-wise duplicate imports and adds the Sale item picker.
 import backend.sale_workflow_ext  # noqa: F401
 # Always exposes a strict manual cleanup for old SaleReport item-wise invoice imports.
