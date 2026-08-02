@@ -4,64 +4,108 @@ import sqlite3
 from typing import Any
 
 from fastapi import Depends, HTTPException
-from pydantic import BaseModel, Field
 
 from backend.app import app, current_user, db, now_iso, split_item_name_size, today_iso
 
 
-class BulkItemRow(BaseModel):
-    id: int
-    name: str = Field(min_length=1, max_length=160)
-    sku: str = ""
-    barcode: str = ""
-    category: str = ""
-    unit: str = "pcs"
-    size: str = ""
-    hsn: str = ""
-    gst_rate: float = 0
-    purchase_price: float = 0
-    sale_price: float = 0
-    mrp: float = 0
-    stock: float = 0
-    min_stock: float = 0
+MAX_BULK_ITEMS = 2000
 
 
-class BulkItemUpdateIn(BaseModel):
-    items: list[BulkItemRow] = Field(min_items=1, max_items=500)
+def _text(value: Any, default: str = "") -> str:
+    if value is None:
+        return default
+    return str(value).strip()
 
 
-class BulkItemDeleteIn(BaseModel):
-    ids: list[int] = Field(min_items=1, max_items=1000)
+def _number(value: Any, default: float = 0.0) -> float:
+    if value in (None, ""):
+        return default
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+    if parsed != parsed or parsed in {float("inf"), float("-inf")}:
+        return default
+    return round(parsed, 4)
+
+
+def _bulk_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_items = payload.get("items") if isinstance(payload, dict) else None
+    if not isinstance(raw_items, list) or not raw_items:
+        raise HTTPException(status_code=400, detail="Select at least one item to save")
+    if len(raw_items) > MAX_BULK_ITEMS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A maximum of {MAX_BULK_ITEMS} items can be saved at one time",
+        )
+
+    rows: list[dict[str, Any]] = []
+    seen_ids: set[int] = set()
+    for index, raw in enumerate(raw_items, start=1):
+        if not isinstance(raw, dict):
+            raise HTTPException(status_code=400, detail=f"Item {index} has invalid data")
+        try:
+            item_id = int(raw.get("id") or 0)
+        except (TypeError, ValueError):
+            item_id = 0
+        if item_id <= 0:
+            raise HTTPException(status_code=400, detail=f"Item {index} has an invalid ID")
+        if item_id in seen_ids:
+            raise HTTPException(status_code=400, detail=f"Item ID {item_id} was selected more than once")
+        seen_ids.add(item_id)
+
+        name = _text(raw.get("name"))
+        if not name:
+            raise HTTPException(status_code=400, detail=f"Item {index} needs a name")
+
+        rows.append(
+            {
+                "id": item_id,
+                "name": name,
+                "sku": _text(raw.get("sku")),
+                "barcode": _text(raw.get("barcode")),
+                "category": _text(raw.get("category")),
+                "unit": _text(raw.get("unit"), "pcs") or "pcs",
+                "size": _text(raw.get("size")),
+                "hsn": _text(raw.get("hsn")),
+                "gst_rate": _number(raw.get("gst_rate")),
+                "purchase_price": _number(raw.get("purchase_price")),
+                "sale_price": _number(raw.get("sale_price")),
+                "mrp": _number(raw.get("mrp")),
+                "stock": _number(raw.get("stock")),
+                "min_stock": _number(raw.get("min_stock")),
+            }
+        )
+    return rows
 
 
 @app.post("/api/items/bulk-update")
 def bulk_update_items(
-    payload: BulkItemUpdateIn,
+    payload: dict[str, Any],
     user: dict[str, Any] = Depends(current_user),
 ) -> dict[str, Any]:
     bid = int(user["business_id"])
-    unique_ids = list(dict.fromkeys(int(row.id) for row in payload.items))
-    if len(unique_ids) != len(payload.items):
-        raise HTTPException(status_code=400, detail="The same item was included more than once")
+    items = _bulk_rows(payload)
+    item_ids = [int(row["id"]) for row in items]
 
     with db() as conn:
-        placeholders = ",".join("?" for _ in unique_ids)
+        placeholders = ",".join("?" for _ in item_ids)
         existing_rows = conn.execute(
             f"SELECT * FROM items WHERE business_id=? AND id IN ({placeholders})",
-            [bid, *unique_ids],
+            [bid, *item_ids],
         ).fetchall()
         existing = {int(row["id"]): row for row in existing_rows}
-        missing = [item_id for item_id in unique_ids if item_id not in existing]
+        missing = [item_id for item_id in item_ids if item_id not in existing]
         if missing:
             raise HTTPException(status_code=404, detail=f"Items not found: {missing[:20]}")
 
         updated_ids: list[int] = []
         try:
-            for row in payload.items:
-                old = existing[int(row.id)]
-                unit = row.unit.strip() or "pcs"
-                clean_name, clean_size = split_item_name_size(row.name, row.size, unit)
-                sku = row.sku.strip() or str(old["sku"] or "")
+            for row in items:
+                old = existing[int(row["id"])]
+                unit = row["unit"] or "pcs"
+                clean_name, clean_size = split_item_name_size(row["name"], row["size"], unit)
+                sku = row["sku"] or str(old["sku"] or "")
                 conn.execute(
                     """
                     UPDATE items
@@ -72,23 +116,23 @@ def bulk_update_items(
                     (
                         clean_name,
                         sku,
-                        row.barcode.strip(),
-                        row.category.strip(),
+                        row["barcode"],
+                        row["category"],
                         unit,
                         clean_size,
-                        row.hsn.strip(),
-                        row.gst_rate,
-                        row.purchase_price,
-                        row.sale_price,
-                        row.mrp,
-                        row.stock,
-                        row.min_stock,
+                        row["hsn"],
+                        row["gst_rate"],
+                        row["purchase_price"],
+                        row["sale_price"],
+                        row["mrp"],
+                        row["stock"],
+                        row["min_stock"],
                         now_iso(),
-                        row.id,
+                        row["id"],
                         bid,
                     ),
                 )
-                difference = round(float(row.stock) - float(old["stock"]), 4)
+                difference = round(float(row["stock"]) - float(old["stock"]), 4)
                 if difference:
                     conn.execute(
                         """
@@ -98,7 +142,7 @@ def bulk_update_items(
                         """,
                         (
                             bid,
-                            row.id,
+                            row["id"],
                             today_iso(),
                             "adjustment",
                             difference,
@@ -107,9 +151,12 @@ def bulk_update_items(
                             now_iso(),
                         ),
                     )
-                updated_ids.append(int(row.id))
+                updated_ids.append(int(row["id"]))
         except sqlite3.IntegrityError as exc:
-            raise HTTPException(status_code=409, detail="An SKU is duplicated. Every item must have a unique SKU") from exc
+            raise HTTPException(
+                status_code=409,
+                detail="An SKU is duplicated. Every item must have a unique SKU",
+            ) from exc
 
         rows = conn.execute(
             f"SELECT * FROM items WHERE business_id=? AND id IN ({placeholders}) ORDER BY name,size",
@@ -121,14 +168,30 @@ def bulk_update_items(
 
 @app.post("/api/items/bulk-delete")
 def bulk_delete_items(
-    payload: BulkItemDeleteIn,
+    payload: dict[str, Any],
     user: dict[str, Any] = Depends(current_user),
 ) -> dict[str, Any]:
-    bid = int(user["business_id"])
-    ids = list(dict.fromkeys(int(item_id) for item_id in payload.ids if int(item_id) > 0))
-    if not ids:
+    raw_ids = payload.get("ids") if isinstance(payload, dict) else None
+    if not isinstance(raw_ids, list) or not raw_ids:
         raise HTTPException(status_code=400, detail="Select at least one item")
+    if len(raw_ids) > MAX_BULK_ITEMS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A maximum of {MAX_BULK_ITEMS} items can be deleted at one time",
+        )
 
+    ids: list[int] = []
+    for value in raw_ids:
+        try:
+            item_id = int(value)
+        except (TypeError, ValueError):
+            continue
+        if item_id > 0 and item_id not in ids:
+            ids.append(item_id)
+    if not ids:
+        raise HTTPException(status_code=400, detail="Select at least one valid item")
+
+    bid = int(user["business_id"])
     with db() as conn:
         placeholders = ",".join("?" for _ in ids)
         owned_rows = conn.execute(
