@@ -1,0 +1,341 @@
+const { withAndroidManifest, withMainActivity } = require("@expo/config-plugins");
+
+const APP_URL = "https://web-production-02514.up.railway.app/?mobile=1&appVersion=104";
+
+function makeMainActivity(packageName) {
+  return `package ${packageName}
+
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.app.DownloadManager
+import android.content.Context
+import android.content.Intent
+import android.graphics.Color
+import android.net.Uri
+import android.os.Bundle
+import android.os.Environment
+import android.os.SystemClock
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.CookieManager
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import android.widget.ProgressBar
+import android.widget.Toast
+
+class MainActivity : Activity() {
+    private lateinit var webView: WebView
+    private lateinit var progressBar: ProgressBar
+    private var uploadCallback: ValueCallback<Array<Uri>>? = null
+    private val uploadRequestCode = 7301
+    private val startUrl = "${APP_URL}"
+    private val startHost = Uri.parse(startUrl).host.orEmpty()
+    private var lastExitBackAt = 0L
+    private var backCallbackPending = false
+
+    @SuppressLint("SetJavaScriptEnabled")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        window.statusBarColor = Color.rgb(8, 127, 191)
+        window.navigationBarColor = Color.rgb(238, 247, 253)
+
+        val root = FrameLayout(this).apply {
+            setBackgroundColor(Color.rgb(238, 247, 253))
+        }
+
+        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            progress = 5
+            isIndeterminate = false
+        }
+
+        webView = WebView(this)
+        configureWebView(webView)
+
+        root.addView(
+            webView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+        root.addView(
+            progressBar,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(4)
+            ).apply { gravity = Gravity.TOP }
+        )
+
+        setContentView(root)
+        webView.loadUrl(startUrl)
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun configureWebView(target: WebView) {
+        target.apply {
+            setBackgroundColor(Color.rgb(238, 247, 253))
+            isFocusable = true
+            isFocusableInTouchMode = true
+            overScrollMode = View.OVER_SCROLL_NEVER
+            requestFocus(View.FOCUS_DOWN)
+        }
+
+        target.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            databaseEnabled = true
+            allowFileAccess = true
+            allowContentAccess = true
+            loadsImagesAutomatically = true
+            loadWithOverviewMode = false
+            useWideViewPort = true
+            builtInZoomControls = false
+            displayZoomControls = false
+            setSupportMultipleWindows(false)
+            javaScriptCanOpenWindowsAutomatically = true
+            mediaPlaybackRequiresUserGesture = false
+            cacheMode = WebSettings.LOAD_NO_CACHE
+            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            userAgentString = userAgentString + " KiranaSoftwareNative/1.0.4"
+        }
+
+        CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            setAcceptThirdPartyCookies(target, true)
+        }
+
+        target.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                return handleUri(request.url)
+            }
+
+            @Deprecated("Deprecated in Android")
+            override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+                return handleUri(Uri.parse(url))
+            }
+
+            override fun onPageFinished(view: WebView, url: String) {
+                super.onPageFinished(view, url)
+                progressBar.visibility = View.GONE
+                view.requestFocus(View.FOCUS_DOWN)
+            }
+
+            override fun onReceivedError(
+                view: WebView,
+                request: WebResourceRequest,
+                error: WebResourceError
+            ) {
+                super.onReceivedError(view, request, error)
+                if (request.isForMainFrame) {
+                    progressBar.visibility = View.GONE
+                    showErrorPage()
+                }
+            }
+        }
+
+        target.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView, newProgress: Int) {
+                progressBar.progress = newProgress
+                progressBar.visibility = if (newProgress >= 100) View.GONE else View.VISIBLE
+            }
+
+            override fun onShowFileChooser(
+                webView: WebView,
+                filePathCallback: ValueCallback<Array<Uri>>,
+                fileChooserParams: FileChooserParams
+            ): Boolean {
+                uploadCallback?.onReceiveValue(null)
+                uploadCallback = filePathCallback
+                return try {
+                    startActivityForResult(fileChooserParams.createIntent(), uploadRequestCode)
+                    true
+                } catch (error: Exception) {
+                    uploadCallback = null
+                    Toast.makeText(this@MainActivity, "The file picker could not be opened", Toast.LENGTH_SHORT).show()
+                    false
+                }
+            }
+        }
+
+        target.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+            try {
+                val request = DownloadManager.Request(Uri.parse(url)).apply {
+                    setMimeType(mimeType)
+                    addRequestHeader("User-Agent", userAgent)
+                    CookieManager.getInstance().getCookie(url)?.let { addRequestHeader("Cookie", it) }
+                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    setDestinationInExternalPublicDir(
+                        Environment.DIRECTORY_DOWNLOADS,
+                        android.webkit.URLUtil.guessFileName(url, contentDisposition, mimeType)
+                    )
+                }
+                (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+                Toast.makeText(this, "Download started", Toast.LENGTH_SHORT).show()
+            } catch (error: Exception) {
+                openExternal(Uri.parse(url))
+            }
+        }
+    }
+
+    private fun handleUri(uri: Uri): Boolean {
+        val scheme = uri.scheme.orEmpty().lowercase()
+
+        if (scheme == "kirana" && uri.host == "retry") {
+            progressBar.visibility = View.VISIBLE
+            webView.loadUrl(startUrl)
+            return true
+        }
+
+        if (scheme == "http" || scheme == "https") {
+            return if (uri.host.equals(startHost, ignoreCase = true)) {
+                false
+            } else {
+                openExternal(uri)
+                true
+            }
+        }
+
+        if (scheme == "intent") {
+            return try {
+                startActivity(Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME))
+                true
+            } catch (error: Exception) {
+                true
+            }
+        }
+
+        if (scheme in setOf("tel", "mailto", "sms", "smsto", "whatsapp", "upi", "paytmmp")) {
+            openExternal(uri)
+            return true
+        }
+
+        return false
+    }
+
+    private fun openExternal(uri: Uri) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (error: Exception) {
+            Toast.makeText(this, "No app is available for this link", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showErrorPage() {
+        val html = """
+            <!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>
+            <style>body{font-family:Arial,sans-serif;background:#eef7fd;color:#263545;margin:0;display:grid;place-items:center;min-height:100vh;padding:24px;box-sizing:border-box}.card{background:white;max-width:420px;padding:28px;border-radius:22px;box-shadow:0 12px 35px #075f9130;text-align:center}.logo{width:78px;height:78px;border-radius:23px;background:#0b82c2;color:white;display:grid;place-items:center;font-size:48px;font-weight:900;margin:auto}h2{margin:20px 0 8px}p{color:#687785;line-height:1.5}a{display:block;margin-top:22px;background:#0b82c2;color:white;text-decoration:none;padding:15px;border-radius:14px;font-weight:800}</style>
+            </head><body><div class='card'><div class='logo'>K</div><h2>The app could not connect</h2><p>Check your internet connection and try again.</p><a href='kirana://retry'>Try Again</a></div></body></html>
+        """.trimIndent()
+        webView.loadDataWithBaseURL(startUrl, html, "text/html", "UTF-8", null)
+    }
+
+    @Deprecated("Deprecated in Android")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == uploadRequestCode) {
+            uploadCallback?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data))
+            uploadCallback = null
+        }
+    }
+
+    private fun handleExitBack() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastExitBackAt <= 2000L) {
+            finish()
+            return
+        }
+        lastExitBackAt = now
+        Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun fallbackBack() {
+        val currentPath = try { Uri.parse(webView.url.orEmpty()).path.orEmpty() } catch (_: Exception) { "" }
+        if (webView.canGoBack() && currentPath !in setOf("", "/", "/owner-login")) {
+            webView.goBack()
+        } else {
+            handleExitBack()
+        }
+    }
+
+    @Deprecated("Deprecated in Android")
+    override fun onBackPressed() {
+        if (!::webView.isInitialized) {
+            handleExitBack()
+            return
+        }
+        if (backCallbackPending) return
+        backCallbackPending = true
+        val script = """
+            (function () {
+              try {
+                return (window.KiranaBack && window.KiranaBack.handle)
+                  ? window.KiranaBack.handle()
+                  : 'native';
+              } catch (error) {
+                return 'native';
+              }
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(script) { rawValue ->
+            backCallbackPending = false
+            val result = rawValue.orEmpty().trim().trim('"').lowercase()
+            when (result) {
+                "handled" -> Unit
+                "home" -> handleExitBack()
+                else -> fallbackBack()
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::webView.isInitialized) webView.onResume()
+    }
+
+    override fun onPause() {
+        if (::webView.isInitialized) webView.onPause()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        if (::webView.isInitialized) {
+            webView.stopLoading()
+            webView.destroy()
+        }
+        super.onDestroy()
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+}
+`;
+}
+
+module.exports = function withNativeKiranaActivityV3(config) {
+  config = withMainActivity(config, current => {
+    const packageName = current.android?.package || "com.kiranasoftware.mobile";
+    current.modResults.language = "kt";
+    current.modResults.contents = makeMainActivity(packageName);
+    return current;
+  });
+
+  config = withAndroidManifest(config, current => {
+    const application = current.modResults.manifest.application?.[0];
+    if (application?.$) {
+      application.$["android:hardwareAccelerated"] = "true";
+      application.$["android:usesCleartextTraffic"] = "false";
+      application.$["android:largeHeap"] = "true";
+    }
+    return current;
+  });
+
+  return config;
+};
