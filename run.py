@@ -72,6 +72,8 @@ import backend.customer_registration_reset_ext  # noqa: F401
 import backend.owner_final_inline_ext  # noqa: F401
 # Android APK route: lightweight core first, optional modules after first paint.
 import backend.native_owner_app_ext  # noqa: F401
+# Adds transaction detail popup to browser and Android owner apps.
+import backend.transaction_detail_ui_ext  # noqa: F401
 
 # Disabled: these layered owner recovery middlewares duplicated/replaced the
 # stable owner bundle and left Android WebView in a half-loaded state.
