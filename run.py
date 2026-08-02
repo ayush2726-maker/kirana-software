@@ -71,6 +71,8 @@ import backend.customer_login_share_fix_ext  # noqa: F401
 import backend.customer_login_race_fix_ext  # noqa: F401
 # Registration/reset OTP flow plus owner OTP request alerts and WhatsApp sending.
 import backend.customer_registration_reset_ext  # noqa: F401
+# Prevents the native owner app from remaining forever on the loading screen.
+import backend.owner_boot_recovery_ext  # noqa: F401
 
 # Disabled: this response-rewrapping middleware caused Railway upstream errors.
 # import backend.owner_dashboard_session_ext  # noqa: F401
