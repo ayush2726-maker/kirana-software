@@ -80,6 +80,8 @@ import backend.native_owner_app_ext  # noqa: F401
 import backend.transaction_detail_ui_ext  # noqa: F401
 # Opens a Vyapar-style item details screen with every related bill and stock entry.
 import backend.item_history_ext  # noqa: F401
+# Makes each Sale/Purchase row inside Item Details open its complete bill.
+import backend.item_history_open_fix_ext  # noqa: F401
 # Adds WhatsApp share, per-transaction print and bulk-print controls.
 import backend.transaction_share_print_ui_ext  # noqa: F401
 # Keeps owner print authenticated while hiding the old floating bulk-print toolbar.
