@@ -1,6 +1,9 @@
 (function () {
   'use strict';
 
+  if (window.__kiranaBulkItemsV134) return;
+  window.__kiranaBulkItemsV134 = true;
+
   var selected = new Set();
   var bulkMode = false;
   var observer = null;
@@ -12,6 +15,28 @@
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char];
     });
+  }
+
+  function errorText(value) {
+    if (value == null) return '';
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (Array.isArray(value)) {
+      return value.map(errorText).filter(Boolean).join(' · ');
+    }
+    if (typeof value === 'object') {
+      if (value.msg) {
+        var location = Array.isArray(value.loc) ? value.loc.filter(function (part) { return part !== 'body'; }).join(' › ') : '';
+        return (location ? location + ': ' : '') + errorText(value.msg);
+      }
+      if (value.detail != null) return errorText(value.detail);
+      if (value.message != null) return errorText(value.message);
+      var parts = Object.keys(value).map(function (key) {
+        var text = errorText(value[key]);
+        return text ? key + ': ' + text : '';
+      }).filter(Boolean);
+      return parts.join(' · ');
+    }
+    return String(value);
   }
 
   async function api(path, options) {
@@ -33,17 +58,19 @@
       window.location.replace('/owner-login');
       throw new Error('Your session expired. Please log in again.');
     }
-    if (!response.ok) throw new Error(data && data.detail ? data.detail : 'Request failed (' + response.status + ')');
+    if (!response.ok) {
+      throw new Error(errorText(data && data.detail != null ? data.detail : data) || 'Request failed (' + response.status + ')');
+    }
     return data;
   }
 
   function notify(message, error) {
     var node = one('#bulk-toast');
     if (!node) return;
-    node.textContent = String(message || 'Done');
+    node.textContent = errorText(message) || 'Done';
     node.className = 'bulk-toast show' + (error ? ' error' : '');
     clearTimeout(notify.timer);
-    notify.timer = setTimeout(function () { node.className = 'bulk-toast'; }, 3600);
+    notify.timer = setTimeout(function () { node.className = 'bulk-toast'; }, 4600);
   }
 
   function inject() {
@@ -65,7 +92,7 @@
     if (filterRow) {
       filterRow.insertAdjacentHTML('afterend',
         '<section id="bulk-items-toolbar" class="bulk-toolbar hidden">' +
-          '<div><strong id="bulk-selected-count">0 selected</strong><small>Select items to edit or delete together</small></div>' +
+          '<div><strong id="bulk-selected-count">0 items selected</strong><small>Har size / batch ko alag select karke edit ya delete karein</small></div>' +
           '<div class="bulk-toolbar-actions">' +
             '<button type="button" data-bulk-action="select-visible">Select Visible</button>' +
             '<button type="button" data-bulk-action="edit" class="bulk-primary" disabled>Edit Selected</button>' +
@@ -79,7 +106,7 @@
     document.body.insertAdjacentHTML('beforeend',
       '<section id="bulk-editor" class="bulk-editor hidden" aria-hidden="true">' +
         '<header><button type="button" data-bulk-action="close-editor" class="bulk-back">‹</button><div><small>INVENTORY</small><h2>Bulk Edit Items</h2></div><button id="bulk-save-top" type="button" data-bulk-action="save" class="bulk-save">Save All</button></header>' +
-        '<div class="bulk-editor-note">Edit each selected item below. All changes will be saved together.</div>' +
+        '<div class="bulk-editor-note">Har selected size / batch neeche alag dikh raha hai.</div>' +
         '<main id="bulk-editor-list"></main>' +
         '<footer><button type="button" data-bulk-action="close-editor">Cancel</button><button type="button" data-bulk-action="save" class="bulk-save">Save All Changes</button></footer>' +
       '</section>' +
@@ -94,32 +121,76 @@
     enhanceCards();
   }
 
-  function itemIdFromCard(card) {
-    var edit = one('[data-action="edit-item"]', card);
+  function itemIdFromElement(element) {
+    if (!element) return 0;
+    var direct = Number(element.getAttribute('data-id') || element.getAttribute('data-bulk-item-id') || 0);
+    if (direct) return direct;
+    var edit = one('[data-action="edit-item"]', element);
     return edit ? Number(edit.getAttribute('data-id') || 0) : 0;
+  }
+
+  function variantRows(card) {
+    return all('.item-variant-row[data-id], .item-variant-row[data-action="edit-item"]', card);
+  }
+
+  function selectionButton(id, variant) {
+    return '<button type="button" class="' + (variant ? 'bulk-variant-select-wrap' : 'bulk-select-wrap') + '" data-bulk-toggle-id="' + id + '" aria-pressed="false" aria-label="Select this size"><span>✓</span></button>';
+  }
+
+  function applySelectionState(node, id, selectedClass) {
+    var on = selected.has(id);
+    node.classList.toggle(selectedClass, on);
+    var button = one('[data-bulk-toggle-id="' + id + '"]', node);
+    if (button) button.setAttribute('aria-pressed', on ? 'true' : 'false');
   }
 
   function enhanceCards() {
     all('#items-list .item-card').forEach(function (card) {
-      var id = itemIdFromCard(card);
+      var rows = variantRows(card);
+      card.classList.toggle('bulk-mode', bulkMode);
+
+      if (rows.length) {
+        all(':scope > .bulk-select-wrap', card).forEach(function (old) { old.remove(); });
+        card.removeAttribute('data-bulk-item-id');
+        rows.forEach(function (row) {
+          var id = itemIdFromElement(row);
+          if (!id) return;
+          row.setAttribute('data-bulk-item-id', String(id));
+          row.classList.toggle('bulk-variant-mode', bulkMode);
+          if (!one('[data-bulk-toggle-id="' + id + '"]', row)) {
+            row.insertAdjacentHTML('afterbegin', selectionButton(id, true));
+          }
+          applySelectionState(row, id, 'bulk-variant-selected');
+        });
+        card.classList.toggle('bulk-selected', rows.some(function (row) {
+          return selected.has(itemIdFromElement(row));
+        }));
+        return;
+      }
+
+      var id = itemIdFromElement(card);
       if (!id) return;
       card.setAttribute('data-bulk-item-id', String(id));
-      if (!one('.bulk-select-wrap', card)) {
-        card.insertAdjacentHTML('afterbegin',
-          '<label class="bulk-select-wrap"><input type="checkbox" data-bulk-select="' + id + '" aria-label="Select item"><span>✓</span></label>'
-        );
+      if (!one(':scope > [data-bulk-toggle-id="' + id + '"]', card)) {
+        card.insertAdjacentHTML('afterbegin', selectionButton(id, false));
       }
-      card.classList.toggle('bulk-mode', bulkMode);
-      card.classList.toggle('bulk-selected', selected.has(id));
-      var checkbox = one('[data-bulk-select]', card);
-      if (checkbox) checkbox.checked = selected.has(id);
+      applySelectionState(card, id, 'bulk-selected');
     });
+  }
+
+  function toggleSelection(id) {
+    id = Number(id || 0);
+    if (!id) return;
+    if (selected.has(id)) selected.delete(id); else selected.add(id);
+    enhanceCards();
+    updateToolbar();
   }
 
   function toggleBulkMode() {
     bulkMode = !bulkMode;
     if (!bulkMode) selected.clear();
-    one('#bulk-items-toolbar').classList.toggle('hidden', !bulkMode);
+    var toolbar = one('#bulk-items-toolbar');
+    if (toolbar) toolbar.classList.toggle('hidden', !bulkMode);
     one('#bulk-items-toggle').textContent = bulkMode ? 'Cancel Bulk' : 'Bulk Edit';
     enhanceCards();
     updateToolbar();
@@ -128,61 +199,72 @@
   function updateToolbar() {
     var count = selected.size;
     var label = one('#bulk-selected-count');
-    if (label) label.textContent = count + (count === 1 ? ' item selected' : ' items selected');
+    if (label) label.textContent = count + (count === 1 ? ' size / item selected' : ' sizes / items selected');
     all('[data-bulk-action="edit"], [data-bulk-action="delete"]').forEach(function (button) {
       button.disabled = count === 0;
     });
   }
 
   function handleClick(event) {
-    var checkbox = event.target.closest('[data-bulk-select]');
-    if (checkbox) {
-      if (!bulkMode) return;
+    var selection = event.target.closest('[data-bulk-toggle-id]');
+    if (selection && bulkMode) {
+      event.preventDefault();
       event.stopPropagation();
-      var id = Number(checkbox.getAttribute('data-bulk-select'));
-      if (checkbox.checked) selected.add(id); else selected.delete(id);
-      var card = checkbox.closest('.item-card');
-      if (card) card.classList.toggle('bulk-selected', checkbox.checked);
-      updateToolbar();
+      event.stopImmediatePropagation();
+      toggleSelection(Number(selection.getAttribute('data-bulk-toggle-id')));
       return;
     }
 
-    if (bulkMode) {
-      var card = event.target.closest('#items-list .item-card');
-      if (card && !event.target.closest('button, input, select, textarea, label')) {
-        event.preventDefault();
-        event.stopPropagation();
-        var cardId = Number(card.getAttribute('data-bulk-item-id'));
-        var cardCheckbox = one('[data-bulk-select]', card);
-        if (cardCheckbox) {
-          cardCheckbox.checked = !cardCheckbox.checked;
-          if (cardCheckbox.checked) selected.add(cardId); else selected.delete(cardId);
-          card.classList.toggle('bulk-selected', cardCheckbox.checked);
-          updateToolbar();
-        }
-        return;
-      }
+    var action = event.target.closest('[data-bulk-action]');
+    if (action) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      var name = action.getAttribute('data-bulk-action');
+      if (name === 'select-visible') selectVisible();
+      if (name === 'edit') openEditor();
+      if (name === 'delete') deleteSelected();
+      if (name === 'done') toggleBulkMode();
+      if (name === 'close-editor') closeEditor();
+      if (name === 'save') saveBulkEdits();
+      return;
     }
 
-    var action = event.target.closest('[data-bulk-action]');
-    if (!action) return;
-    event.preventDefault();
-    event.stopPropagation();
-    var name = action.getAttribute('data-bulk-action');
-    if (name === 'select-visible') selectVisible();
-    if (name === 'edit') openEditor();
-    if (name === 'delete') deleteSelected();
-    if (name === 'done') toggleBulkMode();
-    if (name === 'close-editor') closeEditor();
-    if (name === 'save') saveBulkEdits();
+    if (!bulkMode) return;
+
+    var row = event.target.closest('#items-list .item-variant-row[data-bulk-item-id]');
+    if (row) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      toggleSelection(Number(row.getAttribute('data-bulk-item-id')));
+      return;
+    }
+
+    var card = event.target.closest('#items-list .item-card[data-bulk-item-id]');
+    if (card && !event.target.closest('input, select, textarea')) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      toggleSelection(Number(card.getAttribute('data-bulk-item-id')));
+    }
+  }
+
+  function visibleIds() {
+    var ids = [];
+    all('#items-list .item-variant-row[data-bulk-item-id]').forEach(function (row) {
+      if (row.offsetParent !== null) ids.push(Number(row.getAttribute('data-bulk-item-id')));
+    });
+    all('#items-list .item-card[data-bulk-item-id]').forEach(function (card) {
+      if (card.offsetParent !== null) ids.push(Number(card.getAttribute('data-bulk-item-id')));
+    });
+    return Array.from(new Set(ids.filter(Boolean)));
   }
 
   function selectVisible() {
-    var visibleIds = all('#items-list .item-card').filter(function (card) {
-      return card.offsetParent !== null;
-    }).map(itemIdFromCard).filter(Boolean);
-    var allSelected = visibleIds.length > 0 && visibleIds.every(function (id) { return selected.has(id); });
-    visibleIds.forEach(function (id) {
+    var ids = visibleIds();
+    var allSelected = ids.length > 0 && ids.every(function (id) { return selected.has(id); });
+    ids.forEach(function (id) {
       if (allSelected) selected.delete(id); else selected.add(id);
     });
     enhanceCards();
@@ -192,9 +274,9 @@
   async function openEditor() {
     if (!selected.size) return;
     try {
-      var items = await api('/api/items?limit=2000');
+      var items = await api('/api/items?limit=5000');
       var rows = items.filter(function (item) { return selected.has(Number(item.id)); });
-      if (!rows.length) throw new Error('Selected items were not found');
+      if (!rows.length) throw new Error('Selected sizes were not found');
       one('#bulk-editor-list').innerHTML = rows.map(editorRow).join('');
       one('#bulk-editor').classList.remove('hidden');
       one('#bulk-editor').setAttribute('aria-hidden', 'false');
@@ -206,7 +288,7 @@
 
   function editorRow(item) {
     return '<article class="bulk-edit-card" data-bulk-edit-id="' + Number(item.id) + '">' +
-      '<div class="bulk-edit-title"><strong>' + esc(item.name) + '</strong><small>' + esc(item.sku || '') + '</small></div>' +
+      '<div class="bulk-edit-title"><strong>' + esc(item.name) + '</strong><small>' + esc(item.size || item.unit || '') + (item.sku ? ' · ' + esc(item.sku) : '') + '</small></div>' +
       '<div class="bulk-edit-grid">' +
         field('Name', 'name', item.name, 'text', true) +
         field('Size', 'size', item.size || '', 'text') +
@@ -267,10 +349,13 @@
     buttons.forEach(function (button) { button.disabled = true; button.textContent = 'Saving...'; });
     try {
       var result = await api('/api/items/bulk-update', { method: 'POST', body: { items: items } });
-      notify(result.updated + ' items updated');
-      setTimeout(function () { window.location.replace('/?page=items&stable=103'); }, 500);
+      notify(result.updated + ' size / item updated');
+      setTimeout(function () { window.location.replace('/?page=items&stable=134'); }, 500);
     } catch (error) {
-      buttons.forEach(function (button) { button.disabled = false; button.textContent = button.id === 'bulk-save-top' ? 'Save All' : 'Save All Changes'; });
+      buttons.forEach(function (button) {
+        button.disabled = false;
+        button.textContent = button.id === 'bulk-save-top' ? 'Save All' : 'Save All Changes';
+      });
       notify(error.message, true);
     }
   }
@@ -278,13 +363,27 @@
   async function deleteSelected() {
     if (!selected.size) return;
     var count = selected.size;
-    if (!window.confirm('Delete ' + count + (count === 1 ? ' selected item?' : ' selected items?') + '\n\nItems already used in bills will be kept to protect transaction history.')) return;
+    if (!window.confirm('Delete ' + count + (count === 1 ? ' selected size / item?' : ' selected sizes / items?') + '\n\nSirf select ki hui size delete hogi, poora product nahi.')) return;
     try {
-      var result = await api('/api/items/bulk-delete', { method: 'POST', body: { ids: Array.from(selected) } });
-      var message = result.deleted + ' item(s) deleted.';
-      if (result.blocked && result.blocked.length) message += ' ' + result.blocked.length + ' item(s) were kept because they are used in transactions.';
+      var result = await api('/api/items/bulk-delete', {
+        method: 'POST',
+        body: { ids: Array.from(selected) }
+      });
+      var message = result.deleted + ' size / item deleted.';
+      if (result.blocked && result.blocked.length) {
+        var names = result.blocked.slice(0, 3).map(function (item) {
+          return (item.name || 'Item') + (item.size ? ' - ' + item.size : '');
+        }).join(', ');
+        message += ' Bill me use hone ki wajah se nahi delete hua: ' + names;
+      }
       notify(message, Boolean(result.blocked && result.blocked.length && !result.deleted));
-      setTimeout(function () { window.location.replace('/?page=items&stable=103'); }, 900);
+      (result.deleted_ids || []).forEach(function (id) { selected.delete(Number(id)); });
+      if (result.deleted) {
+        setTimeout(function () { window.location.replace('/?page=items&stable=134'); }, 700);
+      } else {
+        enhanceCards();
+        updateToolbar();
+      }
     } catch (error) {
       notify(error.message, true);
     }
