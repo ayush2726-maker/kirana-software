@@ -6,6 +6,9 @@
 
   var selected = new Set();
   var decorating = false;
+  var activityCache = [];
+  var activityCacheAt = 0;
+  var activityPromise = null;
 
   function one(selector, root) {
     return (root || document).querySelector(selector);
@@ -19,6 +22,20 @@
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character];
     });
+  }
+
+  function normalize(value) {
+    return String(value == null ? '' : value).replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+
+  function num(value) {
+    var parsed = Number(value || 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function amountFromText(value) {
+    var parsed = Number(String(value || '').replace(/[^0-9.\-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   function toast(message, isError) {
@@ -39,6 +56,72 @@
     var kind = String(card.getAttribute('data-transaction-kind') || '').trim();
     var id = Number(card.getAttribute('data-transaction-id') || 0);
     return kind && id > 0 ? kind + ':' + id : '';
+  }
+
+  async function loadActivity(force) {
+    if (!force && activityCache.length && Date.now() - activityCacheAt < 15000) return activityCache;
+    if (activityPromise) return activityPromise;
+    activityPromise = fetch('/api/activity?limit=300', {
+      headers: { Accept: 'application/json' },
+      credentials: 'include',
+      cache: 'no-store'
+    }).then(async function (response) {
+      var data = await response.json().catch(function () { return null; });
+      if (response.status === 401) {
+        window.location.replace('/owner-login');
+        throw new Error('Owner session expired');
+      }
+      if (!response.ok) throw new Error(data && data.detail ? data.detail : 'Transactions could not load');
+      activityCache = Array.isArray(data) ? data : [];
+      activityCacheAt = Date.now();
+      return activityCache;
+    }).finally(function () {
+      activityPromise = null;
+    });
+    return activityPromise;
+  }
+
+  function matchCard(card, rows) {
+    var titleNode = one('h3,b', card);
+    var smallNode = one('small', card);
+    var amountNode = one('.row-top>strong', card) || one(':scope>strong', card);
+    var title = normalize(titleNode ? titleNode.textContent : '');
+    var small = normalize(smallNode ? smallNode.textContent : '');
+    var visibleAmount = amountFromText(amountNode ? amountNode.textContent : '');
+
+    var candidates = rows.filter(function (row) {
+      var rowTitle = normalize(row.title || row.party_name || row.ref || row.invoice_no || 'transaction');
+      var rowRef = normalize(row.ref || row.invoice_no || '');
+      var rowDate = normalize(row.entry_date || row.invoice_date || row.created_at || '');
+      var rowAmount = num(row.amount != null ? row.amount : row.total);
+      var titleMatches = !title || rowTitle === title;
+      var detailMatches = !small || (rowRef && small.indexOf(rowRef) >= 0) || (rowDate && small.indexOf(rowDate) >= 0);
+      var amountMatches = !visibleAmount || Math.abs(rowAmount - visibleAmount) < 0.01;
+      return titleMatches && detailMatches && amountMatches;
+    });
+
+    if (!candidates.length && title) {
+      candidates = rows.filter(function (row) {
+        return normalize(row.title || row.party_name || row.ref || '') === title;
+      });
+    }
+    return candidates[0] || null;
+  }
+
+  async function hydrateMissingCards() {
+    var missing = all('.transaction-card').filter(function (card) { return !keyFor(card); });
+    if (!missing.length) return;
+    try {
+      var rows = await loadActivity(false);
+      missing.forEach(function (card) {
+        var row = matchCard(card, rows);
+        if (!row || !row.id || !row.kind) return;
+        card.setAttribute('data-transaction-id', String(Number(row.id)));
+        card.setAttribute('data-transaction-kind', String(row.kind));
+      });
+    } catch (error) {
+      console.error('Transaction action matching failed', error);
+    }
   }
 
   function injectStyle() {
@@ -73,9 +156,9 @@
   }
 
   function updateSelectionUi() {
-    all('.transaction-card[data-transaction-id][data-transaction-kind]').forEach(function (card) {
+    all('.transaction-card').forEach(function (card) {
       var key = keyFor(card);
-      var checked = selected.has(key);
+      var checked = key ? selected.has(key) : false;
       card.classList.toggle('txn-card-selected', checked);
       var input = one('[data-txn-bulk-select]', card);
       if (input && input.checked !== checked) input.checked = checked;
@@ -100,15 +183,21 @@
     card.appendChild(actions);
   }
 
-  function decorate() {
+  async function decorate() {
     if (decorating) return;
     decorating = true;
     try {
-      all('.transaction-card[data-transaction-id][data-transaction-kind]').forEach(decorateCard);
+      await hydrateMissingCards();
+      all('.transaction-card').forEach(decorateCard);
       updateSelectionUi();
     } finally {
       decorating = false;
     }
+  }
+
+  function scheduleDecorate() {
+    window.clearTimeout(scheduleDecorate.timer);
+    scheduleDecorate.timer = window.setTimeout(decorate, 80);
   }
 
   async function requestShare(kind, id) {
@@ -155,15 +244,13 @@
     if (!keys.length) return toast('Select at least one transaction', true);
     var url = '/owner/bulk-print?items=' + encodeURIComponent(keys.join(','));
     var opened = null;
-    try {
-      opened = window.open(url, '_blank');
-    } catch (ignore) {}
+    try { opened = window.open(url, '_blank'); } catch (ignore) {}
     if (!opened) window.location.href = url;
   }
 
   function visibleCards() {
-    return all('.page.active .transaction-card[data-transaction-id][data-transaction-kind]').filter(function (card) {
-      return card.offsetParent !== null;
+    return all('.page.active .transaction-card').filter(function (card) {
+      return card.offsetParent !== null && Boolean(keyFor(card));
     });
   }
 
@@ -220,15 +307,19 @@
     updateSelectionUi();
   }, true);
 
+  function observeList(id) {
+    var node = one(id);
+    if (!node || typeof MutationObserver === 'undefined') return;
+    new MutationObserver(scheduleDecorate).observe(node, { childList: true });
+  }
+
   function boot() {
     injectStyle();
     ensureBulkBar();
+    observeList('#activity-list');
+    observeList('#transactions-list');
     decorate();
-    var observer = new MutationObserver(function () {
-      window.clearTimeout(boot.mutationTimer);
-      boot.mutationTimer = window.setTimeout(decorate, 50);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    [500, 1500, 3500].forEach(function (delay) { window.setTimeout(scheduleDecorate, delay); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
