@@ -55,6 +55,8 @@ import backend.owner_session_ext  # noqa: F401
 import backend.owner_core_fix_ext  # noqa: F401
 # Legacy inline fallback kept only as a fallback.
 import backend.owner_inline_navigation_ext  # noqa: F401
+# Transactional bulk item edit and delete APIs.
+import backend.bulk_items_ext  # noqa: F401
 # Final outermost owner route: isolated HTML/CSS/JS with no legacy bundle dependency.
 import backend.stable_owner_app_ext  # noqa: F401
 
