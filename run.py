@@ -72,6 +72,8 @@ import backend.customer_login_race_fix_ext  # noqa: F401
 import backend.customer_registration_reset_ext  # noqa: F401
 # Browser fallback owner route.
 import backend.owner_final_inline_ext  # noqa: F401
+# Normalizes Vyapar Item Name/size and groups one product into selectable size variants.
+import backend.item_variant_vyapar_ext  # noqa: F401
 # Android APK route: lightweight core first, optional modules after first paint.
 import backend.native_owner_app_ext  # noqa: F401
 # Adds transaction detail popup to browser and Android owner apps.
