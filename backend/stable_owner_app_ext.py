@@ -12,7 +12,10 @@ OWNER_CSS = STATIC_DIR / "owner-stable.css"
 OWNER_JS = STATIC_DIR / "owner-stable.js"
 TXN_CSS = STATIC_DIR / "owner-transactions.css"
 TXN_JS = STATIC_DIR / "owner-transactions.js"
-VERSION = "102"
+BULK_CSS = STATIC_DIR / "owner-bulk-items.css"
+BULK_JS = STATIC_DIR / "owner-bulk-items.js"
+BACK_JS = STATIC_DIR / "owner-back-navigation.js"
+VERSION = "103"
 
 CACHE_CLEANUP = r"""
 <script id="kirana-cache-cleanup">
@@ -97,12 +100,18 @@ def stable_owner_page(token: str) -> HTMLResponse:
     page = page.replace("__OWNER_VERSION__", VERSION)
     page = page.replace(
         "</head>",
-        f'<link rel="stylesheet" href="/owner-transactions.css?v={VERSION}" />' + CACHE_CLEANUP + "</head>",
+        f'<link rel="stylesheet" href="/owner-transactions.css?v={VERSION}" />'
+        f'<link rel="stylesheet" href="/owner-bulk-items.css?v={VERSION}" />'
+        + CACHE_CLEANUP
+        + "</head>",
         1,
     )
     page = page.replace(
         "</body>",
-        f'<script src="/owner-transactions.js?v={VERSION}"></script></body>',
+        f'<script src="/owner-transactions.js?v={VERSION}"></script>'
+        f'<script src="/owner-bulk-items.js?v={VERSION}"></script>'
+        f'<script src="/owner-back-navigation.js?v={VERSION}"></script>'
+        "</body>",
         1,
     )
     response = HTMLResponse(
@@ -145,6 +154,27 @@ async def serve_isolated_stable_owner_app(request: Request, call_next):
     if request.method == "GET" and path == "/owner-transactions.js":
         return Response(
             TXN_JS.read_text(encoding="utf-8"),
+            media_type="application/javascript",
+            headers=no_cache_headers(),
+        )
+
+    if request.method == "GET" and path == "/owner-bulk-items.css":
+        return Response(
+            BULK_CSS.read_text(encoding="utf-8"),
+            media_type="text/css",
+            headers=no_cache_headers(),
+        )
+
+    if request.method == "GET" and path == "/owner-bulk-items.js":
+        return Response(
+            BULK_JS.read_text(encoding="utf-8"),
+            media_type="application/javascript",
+            headers=no_cache_headers(),
+        )
+
+    if request.method == "GET" and path == "/owner-back-navigation.js":
+        return Response(
+            BACK_JS.read_text(encoding="utf-8"),
             media_type="application/javascript",
             headers=no_cache_headers(),
         )
