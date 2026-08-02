@@ -94,24 +94,34 @@ def main() -> None:
 
     portal = requests.get(f"{BASE_URL}/customer?shop={slug}", timeout=20)
     assert portal.ok, portal.text[:500]
-    assert "/customer-order.js?v=110" in portal.text
+    assert "/customer-order.js?v=112" in portal.text
 
-    customer_script = requests.get(f"{BASE_URL}/customer-order.js?v=110", timeout=20)
+    customer_script = requests.get(f"{BASE_URL}/customer-order.js?v=112", timeout=20)
     assert customer_script.ok
     assert "STALE_AUTH" in customer_script.text
     assert "path !== '/api/customer/login'" in customer_script.text
     assert "Signing in..." in customer_script.text
+    assert "ks_customer_token:${storageSuffix}" in customer_script.text
+    assert "Other shop sessions remain saved" in customer_script.text
 
     owner_page = owner.get(f"{BASE_URL}/?page=orders", timeout=20)
     assert owner_page.ok
     assert "/owner-customer-share.js?v=109" in owner_page.text
     assert "/owner-customer-share.css?v=109" in owner_page.text
+    assert "/owner-customer-otp.js?v=111" in owner_page.text
+    assert "/owner-customer-otp.css?v=111" in owner_page.text
 
     share_script = owner.get(f"{BASE_URL}/owner-customer-share.js?v=109", timeout=20)
     assert share_script.ok
     assert "Share on WhatsApp" in share_script.text
     assert "ghar baithe order karein" in share_script.text
     assert "/api/customer/share-info" in share_script.text
+
+    otp_script = owner.get(f"{BASE_URL}/owner-customer-otp.js?v=111", timeout=20)
+    assert otp_script.ok
+    assert "New Customer OTP Request" in otp_script.text
+    assert "customer-otp-badge" in otp_script.text
+    assert "/api/customer/otp-requests" in otp_script.text
 
     print("CUSTOMER_LOGIN_SHARE_SMOKE_OK")
 
