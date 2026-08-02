@@ -82,6 +82,8 @@ import backend.transaction_detail_ui_ext  # noqa: F401
 import backend.transaction_share_print_ui_ext  # noqa: F401
 # Keeps owner print authenticated and makes Bulk Print always visible.
 import backend.owner_print_fix_ext  # noqa: F401
+# Adds a Vyapar-style printer icon, filters, sorting and bulk print center.
+import backend.owner_print_center_ext  # noqa: F401
 # Adds Items, Sales, Purchases and Parties import center to owner apps.
 import backend.owner_import_center_ext  # noqa: F401
 # Makes OTP expiry/refresh independent of the phone timezone.
