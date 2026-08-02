@@ -37,7 +37,9 @@ import backend.saas_guard_ext  # noqa: F401
 import backend.customer_self_register_ext  # noqa: F401
 # Merges duplicate name/size/unit rows before showing products to customers.
 import backend.customer_catalog_dedupe_ext  # noqa: F401
-# Product visibility feature is temporarily disabled while its runtime conflict is fixed.
+# Safe customer catalog visibility, default rates and customer-specific rate management.
+import backend.customer_catalog_manager_ext  # noqa: F401
+# Old allow-list implementation remains disabled; the safe manager above replaces it.
 # import backend.customer_catalog_visibility_ext  # noqa: F401
 # Redirects old /customer links and resolves the primary shop safely.
 import backend.customer_link_fix_ext  # noqa: F401
@@ -59,6 +61,8 @@ import backend.owner_inline_navigation_ext  # noqa: F401
 import backend.bulk_items_ext  # noqa: F401
 # Final outermost owner route: isolated HTML/CSS/JS with no legacy bundle dependency.
 import backend.stable_owner_app_ext  # noqa: F401
+# Adds the customer catalog manager assets to the isolated owner app.
+import backend.customer_catalog_owner_ui_ext  # noqa: F401
 
 # Disabled: this response-rewrapping middleware caused Railway upstream errors.
 # import backend.owner_dashboard_session_ext  # noqa: F401
