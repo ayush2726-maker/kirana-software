@@ -6,6 +6,7 @@ on:
     paths:
       - "backend/**"
       - "static/owner-stable.*"
+      - "static/owner-transactions.*"
       - "run.py"
       - "tests/owner_ui_smoke.py"
       - ".github/workflows/owner-ui-smoke.yml"
@@ -33,7 +34,7 @@ jobs:
               sha: context.sha,
               state: 'pending',
               context: 'owner-ui-smoke',
-              description: 'Running mobile owner workflow test'
+              description: 'Testing navigation, keyboard and transactions'
             });
 
       - uses: actions/checkout@v4
@@ -50,7 +51,10 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Check owner JavaScript syntax
-        run: node --check static/owner-stable.js
+        run: |
+          node --check static/owner-stable.js
+          node --check static/owner-transactions.js
+          python -m py_compile backend/stable_owner_app_ext.py tests/owner_ui_smoke.py
 
       - name: Start Kirana server
         run: |
@@ -79,7 +83,7 @@ jobs:
               sha: context.sha,
               state: 'success',
               context: 'owner-ui-smoke',
-              description: 'Login, navigation, item, party and sale passed'
+              description: 'Keyboard, sale, purchase, payment and expense passed'
             });
 
       - name: Mark owner UI test failed
