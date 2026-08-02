@@ -1,7 +1,11 @@
 (function () {
   'use strict';
 
+  if (window.__kiranaCustomerShareModuleLoaded) return;
+  window.__kiranaCustomerShareModuleLoaded = true;
+
   var shareInfo = null;
+  var loading = false;
 
   function one(selector, root) {
     return (root || document).querySelector(selector);
@@ -27,7 +31,7 @@
   function toast(message, isError) {
     var node = one('#toast') || one('#txn-toast');
     if (!node) {
-      window.alert(message);
+      console[isError ? 'error' : 'log'](message);
       return;
     }
     node.textContent = String(message || 'Done');
@@ -73,42 +77,53 @@
     card.appendChild(button);
   }
 
-  async function loadShareInfo() {
+  async function loadShareInfo(showError) {
     ensureShareButton();
+    if (loading || shareInfo) return shareInfo;
+    loading = true;
     try {
       shareInfo = await api('/api/customer/share-info');
       var link = absoluteCustomerLink(shareInfo.customer_order_path || '/customer');
       var input = one('#customer-link');
-      if (input) input.value = link;
+      if (input && input.value !== link) input.value = link;
+      return shareInfo;
     } catch (error) {
       console.error(error);
-      toast(error.message, true);
+      if (showError) toast(error.message, true);
+      return null;
+    } finally {
+      loading = false;
     }
   }
 
-  function shareOnWhatsApp() {
-    if (!shareInfo) {
-      loadShareInfo().then(function () {
-        if (shareInfo) shareOnWhatsApp();
-      });
-      return;
-    }
-    var link = absoluteCustomerLink(shareInfo.customer_order_path || '/customer');
-    var message = buildMessage(shareInfo, link);
+  async function shareOnWhatsApp() {
+    var info = shareInfo || await loadShareInfo(true);
+    if (!info) return;
+    var link = absoluteCustomerLink(info.customer_order_path || '/customer');
+    var message = buildMessage(info, link);
     window.location.href = 'https://wa.me/?text=' + encodeURIComponent(message);
   }
 
   document.addEventListener('click', function (event) {
-    var button = event.target.closest('[data-action="share-customer-whatsapp"]');
-    if (!button) return;
-    event.preventDefault();
-    shareOnWhatsApp();
+    var shareButton = event.target.closest('[data-action="share-customer-whatsapp"]');
+    if (shareButton) {
+      event.preventDefault();
+      shareOnWhatsApp();
+      return;
+    }
+
+    var ordersButton = event.target.closest('[data-page="orders"]');
+    if (ordersButton) {
+      window.setTimeout(function () {
+        ensureShareButton();
+        loadShareInfo(false);
+      }, 120);
+    }
   }, true);
 
   function boot() {
     ensureShareButton();
-    loadShareInfo();
-    new MutationObserver(ensureShareButton).observe(document.body, { childList: true, subtree: true });
+    loadShareInfo(false);
   }
 
   boot();
