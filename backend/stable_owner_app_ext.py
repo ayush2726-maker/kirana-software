@@ -19,7 +19,7 @@ BULK_CSS = STATIC_DIR / "owner-bulk-items.css"
 BULK_JS = STATIC_DIR / "owner-bulk-items.js"
 BULK_ERRORS_JS = STATIC_DIR / "owner-bulk-errors.js"
 BACK_JS = STATIC_DIR / "owner-back-navigation.js"
-VERSION = "105"
+VERSION = "117"
 
 CACHE_CLEANUP = r"""
 <script id="kirana-cache-cleanup">
