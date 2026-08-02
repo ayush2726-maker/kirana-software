@@ -34,9 +34,28 @@ def setup_business() -> None:
     response.raise_for_status()
 
 
-def wait_for_owner(page) -> None:
+def wait_for_app(page) -> None:
     page.wait_for_selector("#app:not(.hidden)", timeout=20_000)
+
+
+def wait_for_owner(page) -> None:
+    wait_for_app(page)
     page.wait_for_selector("#page-home.active", timeout=12_000)
+
+
+def add_item(page, name: str, size: str, sale_price: str, purchase_price: str, stock: str) -> None:
+    page.locator('[data-action="new-item"]').first.click()
+    page.wait_for_selector("#item-modal:not(.hidden)", timeout=5_000)
+    form = page.locator("#item-form")
+    form.locator('[name="name"]').fill(name)
+    form.locator('[name="size"]').fill(size)
+    form.locator('[name="unit"]').select_option("kg")
+    form.locator('[name="sale_price"]').fill(sale_price)
+    form.locator('[name="purchase_price"]').fill(purchase_price)
+    form.locator('[name="stock"]').fill(stock)
+    form.locator('button[type="submit"]').click()
+    page.wait_for_selector("#modal-backdrop.hidden", timeout=8_000)
+    page.wait_for_selector(f"#items-list >> text={name}", timeout=8_000)
 
 
 def add_party(page, name: str, party_type: str, phone: str) -> None:
@@ -64,6 +83,48 @@ def open_transaction_center(page) -> None:
     page.wait_for_selector("#page-menu.active", timeout=8_000)
     page.locator('#page-menu [data-txn-action="open-center"]').click()
     page.wait_for_selector("#txn-center:not(.hidden)", timeout=8_000)
+
+
+def test_bulk_items_and_back_stack(page) -> None:
+    page.locator("#bulk-items-toggle").click()
+    page.wait_for_selector("#bulk-items-toolbar:not(.hidden)", timeout=5_000)
+    rice_card = page.locator('.item-card:has-text("Test Rice")').first
+    delete_card = page.locator('.item-card:has-text("Test Delete")').first
+    rice_card.locator('[data-bulk-select]').check()
+    delete_card.locator('[data-bulk-select]').check()
+    page.wait_for_selector("#bulk-selected-count >> text=2 items selected", timeout=5_000)
+    page.locator('[data-bulk-action="edit"]').click()
+    page.wait_for_selector("#bulk-editor:not(.hidden)", timeout=8_000)
+    first_rate = page.locator('#bulk-editor-list [data-bulk-field="sale_price"]').first
+    assert_typing_keeps_focus(page, first_rate, "91")
+    page.locator('#bulk-editor footer [data-bulk-action="save"]').click()
+    page.wait_for_timeout(1200)
+    wait_for_app(page)
+    page.wait_for_selector("#page-items.active", timeout=15_000)
+
+    page.locator("#bulk-items-toggle").click()
+    page.wait_for_selector("#bulk-items-toolbar:not(.hidden)", timeout=5_000)
+    delete_card = page.locator('.item-card:has-text("Test Delete")').first
+    delete_card.locator('[data-bulk-select]').check()
+    page.once("dialog", lambda dialog: dialog.accept())
+    page.locator('[data-bulk-action="delete"]').click()
+    page.wait_for_timeout(1500)
+    wait_for_app(page)
+    page.wait_for_selector("#page-items.active", timeout=15_000)
+    assert page.locator('.item-card:has-text("Test Delete")').count() == 0
+
+    page.locator('[data-page="home"]').last.click()
+    page.wait_for_selector("#page-home.active", timeout=8_000)
+    page.locator('.bottom-nav [data-page="dashboard"]').click()
+    page.wait_for_selector("#page-dashboard.active", timeout=8_000)
+    page.locator('.bottom-nav [data-page="items"]').click()
+    page.wait_for_selector("#page-items.active", timeout=8_000)
+
+    assert page.evaluate("window.KiranaBack.handle()") == "handled"
+    page.wait_for_selector("#page-dashboard.active", timeout=8_000)
+    assert page.evaluate("window.KiranaBack.handle()") == "handled"
+    page.wait_for_selector("#page-home.active", timeout=8_000)
+    assert page.evaluate("window.KiranaBack.handle()") == "home"
 
 
 def main() -> None:
@@ -101,18 +162,9 @@ def main() -> None:
 
         page.locator('.bottom-nav [data-page="items"]').click()
         page.wait_for_selector("#page-items.active", timeout=8_000)
-        page.locator('[data-action="new-item"]').first.click()
-        page.wait_for_selector("#item-modal:not(.hidden)", timeout=5_000)
-        item_form = page.locator("#item-form")
-        item_form.locator('[name="name"]').fill("Test Rice")
-        item_form.locator('[name="size"]').fill("1 kg")
-        item_form.locator('[name="unit"]').select_option("kg")
-        item_form.locator('[name="sale_price"]').fill("80")
-        item_form.locator('[name="purchase_price"]').fill("60")
-        item_form.locator('[name="stock"]').fill("20")
-        item_form.locator('button[type="submit"]').click()
-        page.wait_for_selector("#modal-backdrop.hidden", timeout=8_000)
-        page.wait_for_selector("#items-list >> text=Test Rice", timeout=8_000)
+        add_item(page, "Test Rice", "1 kg", "80", "60", "20")
+        add_item(page, "Test Delete", "2 kg", "40", "30", "5")
+        test_bulk_items_and_back_stack(page)
 
         page.locator('[data-page="menu"]').last.click()
         page.wait_for_selector("#page-menu.active", timeout=8_000)
