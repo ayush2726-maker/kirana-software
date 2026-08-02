@@ -10,7 +10,9 @@ from backend.owner_session_ext import COOKIE_NAME, _session_row, _set_session_co
 OWNER_HTML = STATIC_DIR / "owner-stable.html"
 OWNER_CSS = STATIC_DIR / "owner-stable.css"
 OWNER_JS = STATIC_DIR / "owner-stable.js"
-VERSION = "101"
+TXN_CSS = STATIC_DIR / "owner-transactions.css"
+TXN_JS = STATIC_DIR / "owner-transactions.js"
+VERSION = "102"
 
 CACHE_CLEANUP = r"""
 <script id="kirana-cache-cleanup">
@@ -31,6 +33,43 @@ CACHE_CLEANUP = r"""
 </script>
 """
 
+KEYBOARD_TOTALS_HELPER = r"""
+  function updateSaleTotalsWithoutRerender() {
+    var totals = saleTotals();
+    setText('#sale-subtotal', money(totals.subtotal));
+    setText('#sale-tax', money(totals.tax));
+    setText('#sale-total', money(totals.total));
+    if (one('#sale-payment-mode').value !== 'credit' && number(one('#sale-paid').value) === 0 && totals.total > 0) {
+      one('#sale-paid').value = totals.total.toFixed(2);
+    }
+  }
+
+"""
+
+OLD_LINE_INPUT_HANDLER = r"""    document.addEventListener('input', function (event) {
+      var index = event.target.getAttribute('data-sale-index');
+      var field = event.target.getAttribute('data-sale-field');
+      if (index == null || !field || !state.saleLines[Number(index)]) return;
+      state.saleLines[Number(index)][field] = Math.max(field === 'qty' ? 0.01 : 0, number(event.target.value));
+      renderSaleLines();
+    });"""
+
+NEW_LINE_INPUT_HANDLER = r"""    document.addEventListener('input', function (event) {
+      var index = event.target.getAttribute('data-sale-index');
+      var field = event.target.getAttribute('data-sale-field');
+      if (index == null || !field || !state.saleLines[Number(index)]) return;
+      var line = state.saleLines[Number(index)];
+      line[field] = Math.max(field === 'qty' ? 0.01 : 0, number(event.target.value));
+      var card = event.target.closest('.sale-line');
+      if (card) {
+        var base = number(line.qty) * number(line.rate);
+        var lineTotal = base + (base * number(line.gst_rate) / 100);
+        var totalNode = card.querySelector('.sale-line-total strong');
+        if (totalNode) totalNode.textContent = money(lineTotal);
+      }
+      updateSaleTotalsWithoutRerender();
+    });"""
+
 
 def no_cache_headers() -> dict[str, str]:
     return {
@@ -40,10 +79,32 @@ def no_cache_headers() -> dict[str, str]:
     }
 
 
+def patched_owner_js() -> str:
+    script = OWNER_JS.read_text(encoding="utf-8")
+    if "function updateSaleTotalsWithoutRerender()" not in script:
+        script = script.replace("  function renderSaleLines() {", KEYBOARD_TOTALS_HELPER + "  function renderSaleLines() {", 1)
+    script = script.replace(
+        "    one('#sale-discount').addEventListener('input', renderSaleLines);",
+        "    one('#sale-discount').addEventListener('input', updateSaleTotalsWithoutRerender);",
+        1,
+    )
+    script = script.replace(OLD_LINE_INPUT_HANDLER, NEW_LINE_INPUT_HANDLER, 1)
+    return script
+
+
 def stable_owner_page(token: str) -> HTMLResponse:
     page = OWNER_HTML.read_text(encoding="utf-8")
     page = page.replace("__OWNER_VERSION__", VERSION)
-    page = page.replace("</head>", CACHE_CLEANUP + "</head>", 1)
+    page = page.replace(
+        "</head>",
+        f'<link rel="stylesheet" href="/owner-transactions.css?v={VERSION}" />' + CACHE_CLEANUP + "</head>",
+        1,
+    )
+    page = page.replace(
+        "</body>",
+        f'<script src="/owner-transactions.js?v={VERSION}"></script></body>',
+        1,
+    )
     response = HTMLResponse(
         page,
         headers={
@@ -69,7 +130,21 @@ async def serve_isolated_stable_owner_app(request: Request, call_next):
 
     if request.method == "GET" and path == "/owner-stable.js":
         return Response(
-            OWNER_JS.read_text(encoding="utf-8"),
+            patched_owner_js(),
+            media_type="application/javascript",
+            headers=no_cache_headers(),
+        )
+
+    if request.method == "GET" and path == "/owner-transactions.css":
+        return Response(
+            TXN_CSS.read_text(encoding="utf-8"),
+            media_type="text/css",
+            headers=no_cache_headers(),
+        )
+
+    if request.method == "GET" and path == "/owner-transactions.js":
+        return Response(
+            TXN_JS.read_text(encoding="utf-8"),
             media_type="application/javascript",
             headers=no_cache_headers(),
         )
