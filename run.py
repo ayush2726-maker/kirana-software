@@ -59,7 +59,7 @@ import backend.owner_core_fix_ext  # noqa: F401
 import backend.owner_inline_navigation_ext  # noqa: F401
 # Transactional bulk item edit and delete APIs.
 import backend.bulk_items_ext  # noqa: F401
-# Final outermost owner route: isolated HTML/CSS/JS with no legacy bundle dependency.
+# Final owner route: isolated stable HTML/CSS/JS app.
 import backend.stable_owner_app_ext  # noqa: F401
 # Adds the customer catalog manager assets to the isolated owner app.
 import backend.customer_catalog_owner_ui_ext  # noqa: F401
@@ -71,11 +71,11 @@ import backend.customer_login_share_fix_ext  # noqa: F401
 import backend.customer_login_race_fix_ext  # noqa: F401
 # Registration/reset OTP flow plus owner OTP request alerts and WhatsApp sending.
 import backend.customer_registration_reset_ext  # noqa: F401
-# Prevents the native owner app from remaining forever on the loading screen.
-import backend.owner_boot_recovery_ext  # noqa: F401
-# Final owner delivery: inline every local CSS/JS asset into one HTML response.
-import backend.owner_self_contained_ext  # noqa: F401
 
+# Disabled: these layered owner recovery middlewares duplicated/replaced the
+# stable owner bundle and left Android WebView in a half-loaded state.
+# import backend.owner_boot_recovery_ext  # noqa: F401
+# import backend.owner_self_contained_ext  # noqa: F401
 # Disabled: this response-rewrapping middleware caused Railway upstream errors.
 # import backend.owner_dashboard_session_ext  # noqa: F401
 # Disabled: old barcode/theme browser injection caused blank screens on Android.
