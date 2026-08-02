@@ -7,6 +7,9 @@ on:
       - "backend/**"
       - "static/owner-stable.*"
       - "static/owner-transactions.*"
+      - "static/owner-bulk-items.*"
+      - "static/owner-back-navigation.js"
+      - "plugins/withNativeKiranaActivityV3.js"
       - "run.py"
       - "tests/owner_ui_smoke.py"
       - ".github/workflows/owner-ui-smoke.yml"
@@ -34,7 +37,7 @@ jobs:
               sha: context.sha,
               state: 'pending',
               context: 'owner-ui-smoke',
-              description: 'Testing navigation, keyboard and transactions'
+              description: 'Testing navigation, bulk items and billing'
             });
 
       - uses: actions/checkout@v4
@@ -50,11 +53,14 @@ jobs:
           pip install -r requirements.txt requests playwright
           python -m playwright install --with-deps chromium
 
-      - name: Check owner JavaScript syntax
+      - name: Check owner and native JavaScript syntax
         run: |
           node --check static/owner-stable.js
           node --check static/owner-transactions.js
-          python -m py_compile backend/stable_owner_app_ext.py tests/owner_ui_smoke.py
+          node --check static/owner-bulk-items.js
+          node --check static/owner-back-navigation.js
+          node --check plugins/withNativeKiranaActivityV3.js
+          python -m py_compile backend/stable_owner_app_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py
 
       - name: Start Kirana server
         run: |
@@ -83,7 +89,7 @@ jobs:
               sha: context.sha,
               state: 'success',
               context: 'owner-ui-smoke',
-              description: 'Keyboard, sale, purchase, payment and expense passed'
+              description: 'Navigation, bulk items and billing passed'
             });
 
       - name: Mark owner UI test failed
