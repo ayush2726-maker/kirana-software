@@ -44,7 +44,7 @@ jobs:
               sha: context.sha,
               state: 'pending',
               context: 'owner-ui-smoke',
-              description: 'Testing customer catalog, billing and bulk items'
+              description: 'Testing 15-day catalog rates, billing and bulk items'
             });
 
       - uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
           node --check static/owner-bulk-errors.js
           node --check static/owner-back-navigation.js
           node --check plugins/withNativeKiranaActivityV3.js
-          python -m py_compile backend/stable_owner_app_ext.py backend/customer_catalog_manager_ext.py backend/customer_catalog_owner_ui_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py tests/customer_catalog_manager_smoke.py
+          python -m py_compile backend/stable_owner_app_ext.py backend/customer_catalog_manager_ext.py backend/customer_catalog_owner_ui_ext.py backend/customer_catalog_15day_fix_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py tests/customer_catalog_manager_smoke.py
 
       - name: Start Kirana server
         run: |
@@ -92,7 +92,7 @@ jobs:
       - name: Test credit defaults and linked payments
         run: python tests/credit_link_smoke.py
 
-      - name: Test customer catalog manager
+      - name: Test customer catalog 15-day rate rule
         run: python tests/customer_catalog_manager_smoke.py
 
       - name: Test 501-item bulk save
@@ -109,7 +109,7 @@ jobs:
               sha: context.sha,
               state: 'success',
               context: 'owner-ui-smoke',
-              description: 'Customer catalog, billing and bulk items passed'
+              description: '15-day catalog rates, billing and bulk items passed'
             });
 
       - name: Mark owner UI test failed
