@@ -10,6 +10,8 @@ on:
       - "static/owner-credit-*"
       - "static/owner-linked-payments.js"
       - "static/owner-customer-catalog.*"
+      - "static/owner-customer-share.*"
+      - "static/customer-order.js"
       - "static/owner-bulk-items.*"
       - "static/owner-bulk-errors.js"
       - "static/owner-back-navigation.js"
@@ -19,6 +21,7 @@ on:
       - "tests/bulk_items_smoke.py"
       - "tests/credit_link_smoke.py"
       - "tests/customer_catalog_manager_smoke.py"
+      - "tests/customer_login_share_smoke.py"
       - ".github/workflows/owner-ui-smoke.yml"
   workflow_dispatch:
 
@@ -44,7 +47,7 @@ jobs:
               sha: context.sha,
               state: 'pending',
               context: 'owner-ui-smoke',
-              description: 'Testing 15-day catalog rates, billing and bulk items'
+              description: 'Testing customer login, catalog and billing flows'
             });
 
       - uses: actions/checkout@v4
@@ -60,18 +63,20 @@ jobs:
           pip install -r requirements.txt requests playwright
           python -m playwright install --with-deps chromium
 
-      - name: Check owner and native JavaScript syntax
+      - name: Check owner, customer and native JavaScript syntax
         run: |
           node --check static/owner-stable.js
           node --check static/owner-transactions.js
           node --check static/owner-credit-defaults.js
           node --check static/owner-linked-payments.js
           node --check static/owner-customer-catalog.js
+          node --check static/owner-customer-share.js
+          node --check static/customer-order.js
           node --check static/owner-bulk-items.js
           node --check static/owner-bulk-errors.js
           node --check static/owner-back-navigation.js
           node --check plugins/withNativeKiranaActivityV3.js
-          python -m py_compile backend/stable_owner_app_ext.py backend/customer_catalog_manager_ext.py backend/customer_catalog_owner_ui_ext.py backend/customer_catalog_15day_fix_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py tests/customer_catalog_manager_smoke.py
+          python -m py_compile backend/stable_owner_app_ext.py backend/customer_catalog_manager_ext.py backend/customer_catalog_owner_ui_ext.py backend/customer_catalog_15day_fix_ext.py backend/customer_login_share_fix_ext.py backend/customer_login_race_fix_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py tests/customer_catalog_manager_smoke.py tests/customer_login_share_smoke.py
 
       - name: Start Kirana server
         run: |
@@ -95,6 +100,9 @@ jobs:
       - name: Test customer catalog 15-day rate rule
         run: python tests/customer_catalog_manager_smoke.py
 
+      - name: Test customer login and WhatsApp sharing
+        run: python tests/customer_login_share_smoke.py
+
       - name: Test 501-item bulk save
         run: python tests/bulk_items_smoke.py
 
@@ -109,7 +117,7 @@ jobs:
               sha: context.sha,
               state: 'success',
               context: 'owner-ui-smoke',
-              description: '15-day catalog rates, billing and bulk items passed'
+              description: 'Customer login, sharing, catalog and billing passed'
             });
 
       - name: Mark owner UI test failed
@@ -123,7 +131,7 @@ jobs:
               sha: context.sha,
               state: 'failure',
               context: 'owner-ui-smoke',
-              description: 'Mobile owner workflow test failed'
+              description: 'Mobile owner/customer workflow test failed'
             });
 
       - name: Upload test diagnostics
