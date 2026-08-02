@@ -59,18 +59,16 @@ import backend.owner_core_fix_ext  # noqa: F401
 import backend.owner_inline_navigation_ext  # noqa: F401
 # Transactional bulk item edit and delete APIs.
 import backend.bulk_items_ext  # noqa: F401
-# Final owner route: isolated stable HTML/CSS/JS app.
+# Base isolated owner app and its feature extensions.
 import backend.stable_owner_app_ext  # noqa: F401
-# Adds the customer catalog manager assets to the isolated owner app.
 import backend.customer_catalog_owner_ui_ext  # noqa: F401
-# Fixes catalog API route order and uses only the latest bill from the last 15 days.
 import backend.customer_catalog_15day_fix_ext  # noqa: F401
-# Scopes customer login to the shared shop and adds owner WhatsApp link sharing.
 import backend.customer_login_share_fix_ext  # noqa: F401
-# Prevents an expired request from clearing a newly completed customer login.
 import backend.customer_login_race_fix_ext  # noqa: F401
-# Registration/reset OTP flow plus owner OTP request alerts and WhatsApp sending.
 import backend.customer_registration_reset_ext  # noqa: F401
+# Final outermost owner route: one authenticated HTML response with isolated
+# inline scripts, so Android WebView never waits on /owner-stable.js.
+import backend.owner_final_inline_ext  # noqa: F401
 
 # Disabled: these layered owner recovery middlewares duplicated/replaced the
 # stable owner bundle and left Android WebView in a half-loaded state.
