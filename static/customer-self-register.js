@@ -11,6 +11,8 @@
   const copy = document.querySelector('#customer-auth-copy');
   const params = new URLSearchParams(location.search);
   const shopSlug = String(params.get('shop') || '').trim();
+  const tokenKey = `ks_customer_token:${shopSlug || 'unknown-shop'}`;
+  const shopKey = `ks_customer_shop:${shopSlug || 'unknown-shop'}`;
   let requestedPhone = '';
   let requestMode = 'register';
 
@@ -155,15 +157,22 @@
       if (!response.ok) throw new Error(data?.detail || `Verification failed (${response.status})`);
       if (!data?.token) throw new Error('Account was verified but login session was not created. Please try again.');
 
-      localStorage.setItem('ks_customer_token', data.token);
-      localStorage.setItem('ks_customer_shop', data.shop_slug || shopSlug);
+      const resolvedShop = String(data.shop_slug || shopSlug).trim();
+      localStorage.setItem(`ks_customer_token:${resolvedShop}`, data.token);
+      localStorage.setItem(`ks_customer_shop:${resolvedShop}`, resolvedShop);
+      // Remove only old global storage for this shop. Other shop sessions stay intact.
+      if ((localStorage.getItem('ks_customer_shop') || '') === resolvedShop) {
+        localStorage.removeItem('ks_customer_token');
+        localStorage.removeItem('ks_customer_shop');
+      }
+
       const message = data.pin_reset
         ? 'PIN reset successful. Opening your account...'
         : 'Registration successful. Opening your account...';
       showMessage(message);
       verifyForm.reset();
       window.setTimeout(() => {
-        location.replace(`/customer?shop=${encodeURIComponent(data.shop_slug || shopSlug)}`);
+        location.replace(`/customer?shop=${encodeURIComponent(resolvedShop)}`);
       }, 500);
     } catch (error) {
       showMessage(error?.message || 'OTP verification failed.', true);
