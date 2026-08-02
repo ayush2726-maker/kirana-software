@@ -20,6 +20,7 @@ on:
       - "plugins/withNativeKiranaActivityV3.js"
       - "run.py"
       - "tests/owner_ui_smoke.py"
+      - "tests/owner_boot_recovery_smoke.py"
       - "tests/bulk_items_smoke.py"
       - "tests/credit_link_smoke.py"
       - "tests/customer_catalog_manager_smoke.py"
@@ -50,7 +51,7 @@ jobs:
               sha: context.sha,
               state: 'pending',
               context: 'owner-ui-smoke',
-              description: 'Testing customer login, OTP, multi-shop and billing flows'
+              description: 'Testing startup recovery, customer login, OTP and billing'
             });
 
       - uses: actions/checkout@v4
@@ -81,7 +82,7 @@ jobs:
           node --check static/owner-bulk-errors.js
           node --check static/owner-back-navigation.js
           node --check plugins/withNativeKiranaActivityV3.js
-          python -m py_compile backend/stable_owner_app_ext.py backend/customer_catalog_manager_ext.py backend/customer_catalog_owner_ui_ext.py backend/customer_catalog_15day_fix_ext.py backend/customer_login_share_fix_ext.py backend/customer_login_race_fix_ext.py backend/customer_registration_reset_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py tests/customer_catalog_manager_smoke.py tests/customer_login_share_smoke.py tests/customer_multi_shop_smoke.py
+          python -m py_compile backend/stable_owner_app_ext.py backend/owner_boot_recovery_ext.py backend/customer_catalog_manager_ext.py backend/customer_catalog_owner_ui_ext.py backend/customer_catalog_15day_fix_ext.py backend/customer_login_share_fix_ext.py backend/customer_login_race_fix_ext.py backend/customer_registration_reset_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py tests/owner_boot_recovery_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py tests/customer_catalog_manager_smoke.py tests/customer_login_share_smoke.py tests/customer_multi_shop_smoke.py
 
       - name: Start Kirana server
         run: |
@@ -95,6 +96,9 @@ jobs:
           done
           cat server.log
           exit 1
+
+      - name: Test owner startup recovery
+        run: python tests/owner_boot_recovery_smoke.py
 
       - name: Run mobile browser workflow
         run: python tests/owner_ui_smoke.py
@@ -125,7 +129,7 @@ jobs:
               sha: context.sha,
               state: 'success',
               context: 'owner-ui-smoke',
-              description: 'Customer OTP, multi-shop, catalog and billing passed'
+              description: 'Startup recovery, customer flows and billing passed'
             });
 
       - name: Mark owner UI test failed
