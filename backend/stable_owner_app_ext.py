@@ -14,8 +14,9 @@ TXN_CSS = STATIC_DIR / "owner-transactions.css"
 TXN_JS = STATIC_DIR / "owner-transactions.js"
 BULK_CSS = STATIC_DIR / "owner-bulk-items.css"
 BULK_JS = STATIC_DIR / "owner-bulk-items.js"
+BULK_ERRORS_JS = STATIC_DIR / "owner-bulk-errors.js"
 BACK_JS = STATIC_DIR / "owner-back-navigation.js"
-VERSION = "103"
+VERSION = "104"
 
 CACHE_CLEANUP = r"""
 <script id="kirana-cache-cleanup">
@@ -110,6 +111,7 @@ def stable_owner_page(token: str) -> HTMLResponse:
         "</body>",
         f'<script src="/owner-transactions.js?v={VERSION}"></script>'
         f'<script src="/owner-bulk-items.js?v={VERSION}"></script>'
+        f'<script src="/owner-bulk-errors.js?v={VERSION}"></script>'
         f'<script src="/owner-back-navigation.js?v={VERSION}"></script>'
         "</body>",
         1,
@@ -168,6 +170,13 @@ async def serve_isolated_stable_owner_app(request: Request, call_next):
     if request.method == "GET" and path == "/owner-bulk-items.js":
         return Response(
             BULK_JS.read_text(encoding="utf-8"),
+            media_type="application/javascript",
+            headers=no_cache_headers(),
+        )
+
+    if request.method == "GET" and path == "/owner-bulk-errors.js":
+        return Response(
+            BULK_ERRORS_JS.read_text(encoding="utf-8"),
             media_type="application/javascript",
             headers=no_cache_headers(),
         )
