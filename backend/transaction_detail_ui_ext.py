@@ -5,14 +5,19 @@ from fastapi.responses import HTMLResponse, Response
 
 from backend.app import STATIC_DIR, app
 import backend.native_owner_app_ext as native_owner
+import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "120"
+VERSION = "123"
 DETAIL_JS = STATIC_DIR / "owner-transaction-detail.js"
+DETAIL_URL = f"/owner-transaction-detail.js?v={VERSION}"
 
-if f"/owner-transaction-detail.js?v={VERSION}" not in native_owner.OPTIONAL_JS_URLS:
-    native_owner.OPTIONAL_JS_URLS.append(f"/owner-transaction-detail.js?v={VERSION}")
+if DETAIL_URL not in native_owner.OPTIONAL_JS_URLS:
+    native_owner.OPTIONAL_JS_URLS.append(DETAIL_URL)
+if DETAIL_JS not in final_owner.JS_FILES:
+    final_owner.JS_FILES.append(DETAIL_JS)
+final_owner.BUILD = VERSION
 
 
 _original_stable_owner_page = stable_owner.stable_owner_page
@@ -21,9 +26,8 @@ _original_stable_owner_page = stable_owner.stable_owner_page
 def stable_owner_page_with_transaction_details(token: str) -> HTMLResponse:
     original = _original_stable_owner_page(token)
     html = original.body.decode("utf-8")
-    marker = f"/owner-transaction-detail.js?v={VERSION}"
-    if marker not in html:
-        html = html.replace("</body>", f'<script src="{marker}"></script></body>', 1)
+    if DETAIL_URL not in html:
+        html = html.replace("</body>", f'<script src="{DETAIL_URL}"></script></body>', 1)
     headers = {
         key: value
         for key, value in original.headers.items()
