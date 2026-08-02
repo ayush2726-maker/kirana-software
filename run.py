@@ -80,6 +80,8 @@ import backend.native_owner_app_ext  # noqa: F401
 import backend.transaction_detail_ui_ext  # noqa: F401
 # Adds WhatsApp share, per-transaction print and bulk-print controls.
 import backend.transaction_share_print_ui_ext  # noqa: F401
+# Keeps owner print authenticated and makes Bulk Print always visible.
+import backend.owner_print_fix_ext  # noqa: F401
 # Adds Items, Sales, Purchases and Parties import center to owner apps.
 import backend.owner_import_center_ext  # noqa: F401
 # Makes OTP expiry/refresh independent of the phone timezone.
