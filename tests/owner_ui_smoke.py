@@ -34,6 +34,38 @@ def setup_business() -> None:
     response.raise_for_status()
 
 
+def wait_for_owner(page) -> None:
+    page.wait_for_selector("#app:not(.hidden)", timeout=20_000)
+    page.wait_for_selector("#page-home.active", timeout=12_000)
+
+
+def add_party(page, name: str, party_type: str, phone: str) -> None:
+    page.locator('[data-action="new-party"]').click()
+    page.wait_for_selector("#party-modal:not(.hidden)", timeout=5_000)
+    form = page.locator("#party-form")
+    form.locator('[name="name"]').fill(name)
+    form.locator('[name="type"]').select_option(party_type)
+    form.locator('[name="phone"]').fill(phone)
+    form.locator('button[type="submit"]').click()
+    page.wait_for_selector("#modal-backdrop.hidden", timeout=8_000)
+    page.wait_for_selector(f"#parties-list >> text={name}", timeout=8_000)
+
+
+def assert_typing_keeps_focus(page, locator, value: str) -> None:
+    locator.click()
+    locator.press("Control+A")
+    locator.type(value, delay=80)
+    assert locator.evaluate("element => document.activeElement === element")
+    assert locator.input_value() == value
+
+
+def open_transaction_center(page) -> None:
+    page.locator('[data-page="menu"]').last.click()
+    page.wait_for_selector("#page-menu.active", timeout=8_000)
+    page.locator('#page-menu [data-txn-action="open-center"]').click()
+    page.wait_for_selector("#txn-center:not(.hidden)", timeout=8_000)
+
+
 def main() -> None:
     setup_business()
     browser_errors: list[str] = []
@@ -60,8 +92,7 @@ def main() -> None:
         page.locator('input[name="username"]').fill("admin")
         page.locator('input[name="password"]').fill("1234")
         page.locator('button[type="submit"]').click()
-        page.wait_for_selector("#app:not(.hidden)", timeout=20_000)
-        page.wait_for_selector("#page-home.active", timeout=10_000)
+        wait_for_owner(page)
         assert page.locator("#business-name").inner_text() == "Smoke Test Store"
 
         page.locator('.bottom-nav [data-page="dashboard"]').click()
@@ -87,14 +118,8 @@ def main() -> None:
         page.wait_for_selector("#page-menu.active", timeout=8_000)
         page.locator('#page-menu [data-page="parties"]').click()
         page.wait_for_selector("#page-parties.active", timeout=8_000)
-        page.locator('[data-action="new-party"]').click()
-        page.wait_for_selector("#party-modal:not(.hidden)", timeout=5_000)
-        party_form = page.locator("#party-form")
-        party_form.locator('[name="name"]').fill("Test Customer")
-        party_form.locator('[name="phone"]').fill("9876543210")
-        party_form.locator('button[type="submit"]').click()
-        page.wait_for_selector("#modal-backdrop.hidden", timeout=8_000)
-        page.wait_for_selector("#parties-list >> text=Test Customer", timeout=8_000)
+        add_party(page, "Test Customer", "customer", "9876543210")
+        add_party(page, "Test Supplier", "supplier", "9876543211")
 
         page.locator('[data-page="home"]').last.click()
         page.wait_for_selector("#page-home.active", timeout=8_000)
@@ -104,9 +129,41 @@ def main() -> None:
         page.wait_for_selector('[data-action="add-sale-item"]', timeout=5_000)
         page.locator('[data-action="add-sale-item"]').first.click()
         page.wait_for_selector("#sale-lines >> text=Test Rice", timeout=5_000)
+        assert_typing_keeps_focus(page, page.locator('[data-sale-field="qty"]'), "2")
         page.locator("#save-sale").click()
         page.wait_for_selector("#page-home.active", timeout=12_000)
         page.wait_for_selector("#activity-list >> text=Cash Customer", timeout=12_000)
+
+        open_transaction_center(page)
+        page.locator('[data-txn-action="purchase"]').click()
+        page.wait_for_selector("#txn-form-screen:not(.hidden)", timeout=10_000)
+        page.locator("#txn-bill-party").select_option(label="Test Supplier · 9876543211")
+        page.locator("#txn-bill-reference").fill("SUP-TEST-1")
+        page.locator("#txn-item-search").fill("Test Rice")
+        page.wait_for_selector('[data-txn-add-item]', timeout=8_000)
+        page.locator('[data-txn-add-item]').first.click()
+        page.wait_for_selector("#txn-cart >> text=Test Rice", timeout=8_000)
+        assert_typing_keeps_focus(page, page.locator('[data-txn-field="qty"]'), "3")
+        page.locator("#txn-save-bill").click()
+        wait_for_owner(page)
+
+        open_transaction_center(page)
+        page.locator('[data-txn-action="payment-out"]').click()
+        page.wait_for_selector("#txn-payment-form", timeout=10_000)
+        payment_form = page.locator("#txn-payment-form")
+        payment_form.locator('[name="party_id"]').select_option(label="Test Supplier · 9876543211")
+        payment_form.locator('[name="amount"]').fill("10")
+        payment_form.locator('button[type="submit"]').click()
+        wait_for_owner(page)
+
+        open_transaction_center(page)
+        page.locator('[data-txn-action="expense"]').click()
+        page.wait_for_selector("#txn-entry-form", timeout=10_000)
+        entry_form = page.locator("#txn-entry-form")
+        entry_form.locator('[name="title"]').fill("Smoke Test Expense")
+        entry_form.locator('[name="amount"]').fill("5")
+        entry_form.locator('button[type="submit"]').click()
+        wait_for_owner(page)
 
         page.screenshot(path=str(ARTIFACT_DIR / "owner-ui-smoke.png"), full_page=True)
         context.close()
