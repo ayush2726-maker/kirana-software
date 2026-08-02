@@ -100,6 +100,8 @@ import backend.a5_private_print_ext  # noqa: F401
 import backend.owner_import_center_ext  # noqa: F401
 # Makes OTP expiry/refresh independent of the phone timezone.
 import backend.customer_otp_refresh_fix_ext  # noqa: F401
+# Keeps the final Android/browser cache version on the latest owner build.
+import backend.release_134_ext  # noqa: F401
 
 # Disabled: these layered owner recovery middlewares duplicated/replaced the
 # stable owner bundle and left Android WebView in a half-loaded state.
