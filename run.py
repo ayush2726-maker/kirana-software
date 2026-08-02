@@ -78,9 +78,11 @@ import backend.item_variant_vyapar_ext  # noqa: F401
 import backend.native_owner_app_ext  # noqa: F401
 # Adds transaction detail popup to browser and Android owner apps.
 import backend.transaction_detail_ui_ext  # noqa: F401
+# Opens a Vyapar-style item details screen with every related bill and stock entry.
+import backend.item_history_ext  # noqa: F401
 # Adds WhatsApp share, per-transaction print and bulk-print controls.
 import backend.transaction_share_print_ui_ext  # noqa: F401
-# Keeps owner print authenticated and makes Bulk Print always visible.
+# Keeps owner print authenticated while hiding the old floating bulk-print toolbar.
 import backend.owner_print_fix_ext  # noqa: F401
 # Adds a Vyapar-style printer icon, filters, sorting and bulk print center.
 import backend.owner_print_center_ext  # noqa: F401
