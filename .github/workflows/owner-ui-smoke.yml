@@ -15,6 +15,7 @@ on:
       - "static/owner-transaction-detail.js"
       - "static/owner-transaction-actions.js"
       - "static/owner-import-center.js"
+      - "static/owner-item-variants-core.js"
       - "static/customer-order.js"
       - "static/customer-self-register.js"
       - "static/owner-bulk-items.*"
@@ -29,6 +30,7 @@ on:
       - "tests/customer_catalog_manager_smoke.py"
       - "tests/customer_login_share_smoke.py"
       - "tests/customer_multi_shop_smoke.py"
+      - "tests/item_variant_vyapar_smoke.py"
       - ".github/workflows/owner-ui-smoke.yml"
   workflow_dispatch:
 
@@ -82,13 +84,14 @@ jobs:
           node --check static/owner-transaction-detail.js
           node --check static/owner-transaction-actions.js
           node --check static/owner-import-center.js
+          node --check static/owner-item-variants-core.js
           node --check static/customer-order.js
           node --check static/customer-self-register.js
           node --check static/owner-bulk-items.js
           node --check static/owner-bulk-errors.js
           node --check static/owner-back-navigation.js
           node --check plugins/withNativeKiranaActivityV3.js
-          python -m py_compile backend/stable_owner_app_ext.py backend/owner_boot_recovery_ext.py backend/customer_catalog_manager_ext.py backend/customer_catalog_owner_ui_ext.py backend/customer_catalog_15day_fix_ext.py backend/customer_login_share_fix_ext.py backend/customer_login_race_fix_ext.py backend/customer_registration_reset_ext.py backend/bulk_items_ext.py backend/transaction_detail_ui_ext.py backend/transaction_share_print_ui_ext.py backend/owner_import_center_ext.py tests/owner_ui_smoke.py tests/owner_boot_recovery_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py tests/customer_catalog_manager_smoke.py tests/customer_login_share_smoke.py tests/customer_multi_shop_smoke.py
+          python -m py_compile backend/stable_owner_app_ext.py backend/owner_boot_recovery_ext.py backend/customer_catalog_manager_ext.py backend/customer_catalog_owner_ui_ext.py backend/customer_catalog_15day_fix_ext.py backend/customer_login_share_fix_ext.py backend/customer_login_race_fix_ext.py backend/customer_registration_reset_ext.py backend/bulk_items_ext.py backend/transaction_detail_ui_ext.py backend/transaction_share_print_ui_ext.py backend/owner_import_center_ext.py backend/item_variant_vyapar_ext.py tests/owner_ui_smoke.py tests/owner_boot_recovery_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py tests/customer_catalog_manager_smoke.py tests/customer_login_share_smoke.py tests/customer_multi_shop_smoke.py tests/item_variant_vyapar_smoke.py
 
       - name: Verify final owner bundle includes new controls
         run: |
@@ -100,6 +103,8 @@ jobs:
           assert 'data-owner-inline="owner-transaction-actions.js"' in html
           assert 'data-owner-inline="owner-import-center.js"' in html
           assert 'data-transaction-id' in html
+          assert 'Vyapar item-size variants v126' in html
+          assert 'SELECT SIZE / BATCH' in html
           print('FINAL_OWNER_BUNDLE_OK')
           PY
 
@@ -133,6 +138,9 @@ jobs:
 
       - name: Test same customer across separate shops
         run: python tests/customer_multi_shop_smoke.py
+
+      - name: Test Vyapar product size variants
+        run: python tests/item_variant_vyapar_smoke.py
 
       - name: Test 501-item bulk save
         run: python tests/bulk_items_smoke.py
