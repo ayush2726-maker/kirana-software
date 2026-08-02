@@ -1,18 +1,67 @@
 (() => {
+  'use strict';
+
   const shopSlug = String(new URLSearchParams(location.search).get('shop') || '').trim();
+  const storageSuffix = shopSlug || 'unknown-shop';
+  const tokenKey = `ks_customer_token:${storageSuffix}`;
+  const shopKey = `ks_customer_shop:${storageSuffix}`;
+
+  function loadStoredToken() {
+    const scoped = localStorage.getItem(tokenKey) || '';
+    if (scoped) return scoped;
+
+    // One-time migration from the old global storage keys. Only migrate when
+    // the saved shop matches this exact customer link.
+    const legacyShop = localStorage.getItem('ks_customer_shop') || '';
+    const legacyToken = localStorage.getItem('ks_customer_token') || '';
+    if (legacyToken && legacyShop && legacyShop === shopSlug) {
+      localStorage.setItem(tokenKey, legacyToken);
+      localStorage.setItem(shopKey, shopSlug);
+      localStorage.removeItem('ks_customer_token');
+      localStorage.removeItem('ks_customer_shop');
+      return legacyToken;
+    }
+    return '';
+  }
+
   const state = {
-    token: localStorage.getItem('ks_customer_token') || '',
+    token: loadStoredToken(),
     me: null,
     products: [],
     orders: [],
     cart: [],
     productQty: {}
   };
+
   const fmt = value => `₹${Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-  const sourceText = source => ({ fixed: 'Aapka Fixed Rate', last_bill: 'Aapke Last Bill Ka Rate', default: 'Current Rate' }[source] || 'Rate');
+  const sourceText = source => ({
+    fixed: 'Aapka Special Rate',
+    recent_15_days: 'Last 15 Days Bill Rate',
+    catalog: 'Default Customer Rate',
+    last_bill: 'Aapke Last Bill Ka Rate',
+    default: 'Current Rate'
+  }[source] || 'Rate');
   const roundQty = value => Math.round(Math.max(0, Number(value || 0)) * 1000) / 1000;
   const fmtQty = value => Number(roundQty(value).toFixed(3)).toString();
+
+  function saveSession(token, resolvedShop) {
+    const slug = String(resolvedShop || shopSlug).trim();
+    state.token = String(token || '');
+    if (!state.token) return;
+    localStorage.setItem(tokenKey, state.token);
+    localStorage.setItem(shopKey, slug || shopSlug);
+  }
+
+  function clearSession() {
+    localStorage.removeItem(tokenKey);
+    localStorage.removeItem(shopKey);
+    // Remove old global keys only when they belong to this shop.
+    if ((localStorage.getItem('ks_customer_shop') || '') === shopSlug) {
+      localStorage.removeItem('ks_customer_token');
+      localStorage.removeItem('ks_customer_shop');
+    }
+  }
 
   function ensureQtyStyles() {
     if (document.querySelector('link[data-customer-product-qty]')) return;
@@ -25,16 +74,20 @@
 
   async function api(path, options = {}) {
     const headers = { ...(options.headers || {}) };
-    if (state.token) headers.Authorization = `Bearer ${state.token}`;
+    const requestToken = state.token;
+    if (requestToken && path !== '/api/customer/login') headers.Authorization = `Bearer ${requestToken}`;
     if (options.body) {
       headers['Content-Type'] = 'application/json';
       options.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
     }
-    const response = await fetch(path, { ...options, headers });
+    const response = await fetch(path, { ...options, headers, cache: 'no-store' });
     const data = await response.json().catch(() => null);
     if (response.status === 401 && path !== '/api/customer/login') {
-      logout(false);
-      throw new Error('Login expired. Dobara login karein.');
+      const staleResponse = Boolean(requestToken && requestToken !== state.token);
+      if (!staleResponse) logout(false);
+      const authError = new Error('Login expired. Please sign in again.');
+      authError.code = staleResponse ? 'STALE_AUTH' : 'AUTH_EXPIRED';
+      throw authError;
     }
     if (!response.ok) throw new Error(data?.detail || 'Request failed');
     return data;
@@ -51,13 +104,16 @@
     ensureQtyStyles();
     bind();
     renderCart();
-    const savedShop = localStorage.getItem('ks_customer_shop') || '';
-    if (state.token && shopSlug && savedShop && savedShop !== shopSlug) logout(false);
+    if (!shopSlug) {
+      showLogin();
+      toast('Please open the exact customer link shared by the shop.', true);
+      return;
+    }
     if (!state.token) return showLogin();
     try {
       await enterApp();
     } catch (error) {
-      toast(error.message, true);
+      if (error && error.code !== 'STALE_AUTH') toast(error.message, true);
     }
   }
 
@@ -76,18 +132,37 @@
 
   async function login(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const button = formElement.querySelector('button[type="submit"]');
+    const previousLabel = button ? button.textContent : 'Login';
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Signing in...';
+    }
+
+    // Clear only this shop's old session. Other shop sessions remain saved.
+    state.token = '';
+    clearSession();
+
     try {
       const result = await api('/api/customer/login', {
         method: 'POST',
         body: { phone: form.get('phone'), pin: form.get('pin'), shop_slug: shopSlug }
       });
-      state.token = result.token;
-      localStorage.setItem('ks_customer_token', state.token);
-      localStorage.setItem('ks_customer_shop', result.shop_slug || shopSlug);
+      if (!result || !result.token) throw new Error('Login could not be completed. Please try again.');
+      saveSession(result.token, result.shop_slug || shopSlug);
       await enterApp();
+      const pinInput = formElement.querySelector('[name="pin"]');
+      if (pinInput) pinInput.value = '';
+      toast('Login successful');
     } catch (error) {
-      toast(error.message, true);
+      if (!error || error.code !== 'STALE_AUTH') toast(error.message || 'Login failed', true);
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = previousLabel;
+      }
     }
   }
 
@@ -102,13 +177,13 @@
   }
 
   async function logout(callApi) {
-    if (callApi && state.token) api('/api/customer/logout', { method: 'POST' }).catch(() => {});
+    const tokenToLogout = state.token;
+    if (callApi && tokenToLogout) api('/api/customer/logout', { method: 'POST' }).catch(() => {});
     state.token = '';
     state.me = null;
     state.cart = [];
     state.productQty = {};
-    localStorage.removeItem('ks_customer_token');
-    localStorage.removeItem('ks_customer_shop');
+    clearSession();
     showLogin();
   }
 
