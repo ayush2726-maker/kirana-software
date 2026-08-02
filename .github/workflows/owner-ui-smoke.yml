@@ -8,10 +8,12 @@ on:
       - "static/owner-stable.*"
       - "static/owner-transactions.*"
       - "static/owner-bulk-items.*"
+      - "static/owner-bulk-errors.js"
       - "static/owner-back-navigation.js"
       - "plugins/withNativeKiranaActivityV3.js"
       - "run.py"
       - "tests/owner_ui_smoke.py"
+      - "tests/bulk_items_smoke.py"
       - ".github/workflows/owner-ui-smoke.yml"
   workflow_dispatch:
 
@@ -58,9 +60,10 @@ jobs:
           node --check static/owner-stable.js
           node --check static/owner-transactions.js
           node --check static/owner-bulk-items.js
+          node --check static/owner-bulk-errors.js
           node --check static/owner-back-navigation.js
           node --check plugins/withNativeKiranaActivityV3.js
-          python -m py_compile backend/stable_owner_app_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py
+          python -m py_compile backend/stable_owner_app_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py tests/bulk_items_smoke.py
 
       - name: Start Kirana server
         run: |
@@ -78,6 +81,9 @@ jobs:
       - name: Run mobile browser workflow
         run: python tests/owner_ui_smoke.py
 
+      - name: Test 501-item bulk save
+        run: python tests/bulk_items_smoke.py
+
       - name: Mark owner UI test successful
         if: success()
         uses: actions/github-script@v7
@@ -89,7 +95,7 @@ jobs:
               sha: context.sha,
               state: 'success',
               context: 'owner-ui-smoke',
-              description: 'Navigation, bulk items and billing passed'
+              description: 'Navigation, 501-item bulk save and billing passed'
             });
 
       - name: Mark owner UI test failed
