@@ -7,6 +7,8 @@ on:
       - "backend/**"
       - "static/owner-stable.*"
       - "static/owner-transactions.*"
+      - "static/owner-credit-*"
+      - "static/owner-linked-payments.js"
       - "static/owner-bulk-items.*"
       - "static/owner-bulk-errors.js"
       - "static/owner-back-navigation.js"
@@ -14,6 +16,7 @@ on:
       - "run.py"
       - "tests/owner_ui_smoke.py"
       - "tests/bulk_items_smoke.py"
+      - "tests/credit_link_smoke.py"
       - ".github/workflows/owner-ui-smoke.yml"
   workflow_dispatch:
 
@@ -39,7 +42,7 @@ jobs:
               sha: context.sha,
               state: 'pending',
               context: 'owner-ui-smoke',
-              description: 'Testing navigation, bulk items and billing'
+              description: 'Testing credit billing, payment links and bulk items'
             });
 
       - uses: actions/checkout@v4
@@ -59,11 +62,13 @@ jobs:
         run: |
           node --check static/owner-stable.js
           node --check static/owner-transactions.js
+          node --check static/owner-credit-defaults.js
+          node --check static/owner-linked-payments.js
           node --check static/owner-bulk-items.js
           node --check static/owner-bulk-errors.js
           node --check static/owner-back-navigation.js
           node --check plugins/withNativeKiranaActivityV3.js
-          python -m py_compile backend/stable_owner_app_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py tests/bulk_items_smoke.py
+          python -m py_compile backend/stable_owner_app_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py
 
       - name: Start Kirana server
         run: |
@@ -81,6 +86,9 @@ jobs:
       - name: Run mobile browser workflow
         run: python tests/owner_ui_smoke.py
 
+      - name: Test credit defaults and linked payments
+        run: python tests/credit_link_smoke.py
+
       - name: Test 501-item bulk save
         run: python tests/bulk_items_smoke.py
 
@@ -95,7 +103,7 @@ jobs:
               sha: context.sha,
               state: 'success',
               context: 'owner-ui-smoke',
-              description: 'Navigation, 501-item bulk save and billing passed'
+              description: 'Credit billing, linked payments and bulk items passed'
             });
 
       - name: Mark owner UI test failed
