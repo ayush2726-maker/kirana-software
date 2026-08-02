@@ -12,11 +12,14 @@ OWNER_CSS = STATIC_DIR / "owner-stable.css"
 OWNER_JS = STATIC_DIR / "owner-stable.js"
 TXN_CSS = STATIC_DIR / "owner-transactions.css"
 TXN_JS = STATIC_DIR / "owner-transactions.js"
+CREDIT_CSS = STATIC_DIR / "owner-credit-payments.css"
+CREDIT_DEFAULTS_JS = STATIC_DIR / "owner-credit-defaults.js"
+LINKED_PAYMENTS_JS = STATIC_DIR / "owner-linked-payments.js"
 BULK_CSS = STATIC_DIR / "owner-bulk-items.css"
 BULK_JS = STATIC_DIR / "owner-bulk-items.js"
 BULK_ERRORS_JS = STATIC_DIR / "owner-bulk-errors.js"
 BACK_JS = STATIC_DIR / "owner-back-navigation.js"
-VERSION = "104"
+VERSION = "105"
 
 CACHE_CLEANUP = r"""
 <script id="kirana-cache-cleanup">
@@ -102,6 +105,7 @@ def stable_owner_page(token: str) -> HTMLResponse:
     page = page.replace(
         "</head>",
         f'<link rel="stylesheet" href="/owner-transactions.css?v={VERSION}" />'
+        f'<link rel="stylesheet" href="/owner-credit-payments.css?v={VERSION}" />'
         f'<link rel="stylesheet" href="/owner-bulk-items.css?v={VERSION}" />'
         + CACHE_CLEANUP
         + "</head>",
@@ -110,6 +114,8 @@ def stable_owner_page(token: str) -> HTMLResponse:
     page = page.replace(
         "</body>",
         f'<script src="/owner-transactions.js?v={VERSION}"></script>'
+        f'<script src="/owner-credit-defaults.js?v={VERSION}"></script>'
+        f'<script src="/owner-linked-payments.js?v={VERSION}"></script>'
         f'<script src="/owner-bulk-items.js?v={VERSION}"></script>'
         f'<script src="/owner-bulk-errors.js?v={VERSION}"></script>'
         f'<script src="/owner-back-navigation.js?v={VERSION}"></script>'
@@ -133,60 +139,37 @@ async def serve_isolated_stable_owner_app(request: Request, call_next):
     path = request.url.path.rstrip("/") or "/"
 
     if request.method == "GET" and path == "/owner-stable.css":
-        return Response(
-            OWNER_CSS.read_text(encoding="utf-8"),
-            media_type="text/css",
-            headers=no_cache_headers(),
-        )
+        return Response(OWNER_CSS.read_text(encoding="utf-8"), media_type="text/css", headers=no_cache_headers())
 
     if request.method == "GET" and path == "/owner-stable.js":
-        return Response(
-            patched_owner_js(),
-            media_type="application/javascript",
-            headers=no_cache_headers(),
-        )
+        return Response(patched_owner_js(), media_type="application/javascript", headers=no_cache_headers())
 
     if request.method == "GET" and path == "/owner-transactions.css":
-        return Response(
-            TXN_CSS.read_text(encoding="utf-8"),
-            media_type="text/css",
-            headers=no_cache_headers(),
-        )
+        return Response(TXN_CSS.read_text(encoding="utf-8"), media_type="text/css", headers=no_cache_headers())
 
     if request.method == "GET" and path == "/owner-transactions.js":
-        return Response(
-            TXN_JS.read_text(encoding="utf-8"),
-            media_type="application/javascript",
-            headers=no_cache_headers(),
-        )
+        return Response(TXN_JS.read_text(encoding="utf-8"), media_type="application/javascript", headers=no_cache_headers())
+
+    if request.method == "GET" and path == "/owner-credit-payments.css":
+        return Response(CREDIT_CSS.read_text(encoding="utf-8"), media_type="text/css", headers=no_cache_headers())
+
+    if request.method == "GET" and path == "/owner-credit-defaults.js":
+        return Response(CREDIT_DEFAULTS_JS.read_text(encoding="utf-8"), media_type="application/javascript", headers=no_cache_headers())
+
+    if request.method == "GET" and path == "/owner-linked-payments.js":
+        return Response(LINKED_PAYMENTS_JS.read_text(encoding="utf-8"), media_type="application/javascript", headers=no_cache_headers())
 
     if request.method == "GET" and path == "/owner-bulk-items.css":
-        return Response(
-            BULK_CSS.read_text(encoding="utf-8"),
-            media_type="text/css",
-            headers=no_cache_headers(),
-        )
+        return Response(BULK_CSS.read_text(encoding="utf-8"), media_type="text/css", headers=no_cache_headers())
 
     if request.method == "GET" and path == "/owner-bulk-items.js":
-        return Response(
-            BULK_JS.read_text(encoding="utf-8"),
-            media_type="application/javascript",
-            headers=no_cache_headers(),
-        )
+        return Response(BULK_JS.read_text(encoding="utf-8"), media_type="application/javascript", headers=no_cache_headers())
 
     if request.method == "GET" and path == "/owner-bulk-errors.js":
-        return Response(
-            BULK_ERRORS_JS.read_text(encoding="utf-8"),
-            media_type="application/javascript",
-            headers=no_cache_headers(),
-        )
+        return Response(BULK_ERRORS_JS.read_text(encoding="utf-8"), media_type="application/javascript", headers=no_cache_headers())
 
     if request.method == "GET" and path == "/owner-back-navigation.js":
-        return Response(
-            BACK_JS.read_text(encoding="utf-8"),
-            media_type="application/javascript",
-            headers=no_cache_headers(),
-        )
+        return Response(BACK_JS.read_text(encoding="utf-8"), media_type="application/javascript", headers=no_cache_headers())
 
     if request.method == "GET" and path == "/":
         handoff = request.query_params.get("handoff")
