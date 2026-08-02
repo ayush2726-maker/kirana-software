@@ -82,8 +82,12 @@ import backend.transaction_detail_ui_ext  # noqa: F401
 import backend.item_history_ext  # noqa: F401
 # Safely edits sale, purchase and return bills while reversing old stock/account effects.
 import backend.bill_edit_ext  # noqa: F401
+# Repairs stock when an edited bill moves quantity from one size/variant to another.
+import backend.item_stock_repair_ext  # noqa: F401
 # Makes each Sale/Purchase row inside Item Details open and edit its complete bill.
 import backend.item_history_open_fix_ext  # noqa: F401
+# Adds a delete action that can merge unused size stock into another size.
+import backend.item_merge_delete_ui_ext  # noqa: F401
 # Adds WhatsApp share, per-transaction print and bulk-print controls.
 import backend.transaction_share_print_ui_ext  # noqa: F401
 # Keeps owner print authenticated while hiding the old floating bulk-print toolbar.
