@@ -9,9 +9,9 @@ import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "133"
-ASSET = STATIC_DIR / "owner-item-merge-delete.js"
-ASSET_URL = f"/owner-item-merge-delete.js?v={VERSION}"
+VERSION = "134"
+ASSET = STATIC_DIR / "owner-item-merge-delete-v2.js"
+ASSET_URL = f"/owner-item-merge-delete-v2.js?v={VERSION}"
 
 
 if ASSET_URL not in native_owner.OPTIONAL_JS_URLS:
@@ -49,7 +49,7 @@ stable_owner.stable_owner_page = stable_owner_page_with_item_merge_delete
 
 @app.middleware("http")
 async def serve_item_merge_delete_asset(request: Request, call_next):
-    if request.method == "GET" and request.url.path.rstrip("/") == "/owner-item-merge-delete.js":
+    if request.method == "GET" and request.url.path.rstrip("/") == "/owner-item-merge-delete-v2.js":
         return Response(
             ASSET.read_text(encoding="utf-8"),
             media_type="application/javascript",
