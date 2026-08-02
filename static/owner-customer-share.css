@@ -1,0 +1,26 @@
+.customer-whatsapp-share {
+  width: 100%;
+  min-height: 58px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 18px;
+  background: #18a957;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(24, 169, 87, .22);
+}
+
+.customer-whatsapp-share:active {
+  transform: translateY(1px);
+}
+
+.customer-whatsapp-share span {
+  font-size: 25px;
+  line-height: 1;
+}
