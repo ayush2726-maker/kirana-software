@@ -120,9 +120,8 @@ def main() -> None:
         )
     )
     second_token = str(second_signup["token"])
-    second_headers = bearer(second_token)
     second_owner = requests.Session()
-    second_owner.headers.update(second_headers)
+    second_owner.headers.update(bearer(second_token))
 
     second_party = json_ok(
         second_owner.post(
@@ -242,10 +241,12 @@ def main() -> None:
     )
     orders_one = json_ok(requests.get(f"{BASE_URL}/api/customer/orders", headers=customer_one_headers, timeout=20))
     orders_two = json_ok(requests.get(f"{BASE_URL}/api/customer/orders", headers=customer_two_headers, timeout=20))
-    assert any(row["order_no"] == order_one["order_no"] for row in orders_one)
-    assert all(row["order_no"] != order_two["order_no"] for row in orders_one)
-    assert any(row["order_no"] == order_two["order_no"] for row in orders_two)
-    assert all(row["order_no"] != order_one["order_no"] for row in orders_two)
+    ids_one = {int(row["id"]) for row in orders_one}
+    ids_two = {int(row["id"]) for row in orders_two}
+    assert int(order_one["id"]) in ids_one
+    assert int(order_two["id"]) not in ids_one
+    assert int(order_two["id"]) in ids_two
+    assert int(order_one["id"]) not in ids_two
 
     otp_one = json_ok(
         requests.post(
@@ -264,12 +265,12 @@ def main() -> None:
     assert otp_one["request_id"] != otp_two["request_id"]
     owner_one_otps = json_ok(first_owner.get(f"{BASE_URL}/api/customer/otp-requests", timeout=20))
     owner_two_otps = json_ok(second_owner.get(f"{BASE_URL}/api/customer/otp-requests", timeout=20))
-    ids_one = {int(row["id"]) for row in owner_one_otps}
-    ids_two = {int(row["id"]) for row in owner_two_otps}
-    assert int(otp_one["request_id"]) in ids_one
-    assert int(otp_two["request_id"]) not in ids_one
-    assert int(otp_two["request_id"]) in ids_two
-    assert int(otp_one["request_id"]) not in ids_two
+    otp_ids_one = {int(row["id"]) for row in owner_one_otps}
+    otp_ids_two = {int(row["id"]) for row in owner_two_otps}
+    assert int(otp_one["request_id"]) in otp_ids_one
+    assert int(otp_two["request_id"]) not in otp_ids_one
+    assert int(otp_two["request_id"]) in otp_ids_two
+    assert int(otp_one["request_id"]) not in otp_ids_two
 
     customer_script = requests.get(f"{BASE_URL}/customer-order.js?v=112", timeout=20)
     assert customer_script.ok
