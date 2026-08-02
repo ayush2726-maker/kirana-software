@@ -13,7 +13,7 @@ from backend.app import db, now_iso
 
 
 VERSION = "126"
-_ITEM_CACHE: dict[tuple[int, int], list[dict[str, Any]]] = {}
+_ITEM_CACHE: dict[tuple[int, int], dict[str, Any]] = {}
 _INVISIBLE = re.compile(r"[\u200B-\u200D\u2060\uFEFF]")
 _UNIT_ALIASES = {
     "g": "gm", "gm": "gm", "gms": "gm", "gram": "gm", "grams": "gm",
@@ -133,6 +133,31 @@ def _unique_variant_sku(conn: Any, business_id: int, base_sku: str, clean_size: 
     return candidate
 
 
+def _item_cache(conn: Any, bid: int) -> dict[str, Any]:
+    cache_key = (id(conn), bid)
+    cached = _ITEM_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+    by_variant: dict[tuple[str, str], dict[str, Any]] = {}
+    sibling_units: dict[str, str] = {}
+    for row in conn.execute(
+        "SELECT id,name,size,unit,sku FROM items WHERE business_id=?",
+        (bid,),
+    ).fetchall():
+        item = dict(row)
+        identity = product_identity(item["name"])
+        size_key = _size_identity(item["size"], item["unit"])
+        by_variant.setdefault((identity, size_key), item)
+        normalized_unit = _normalize_unit(item["unit"])
+        if normalized_unit and normalized_unit != "pcs":
+            sibling_units.setdefault(identity, normalized_unit)
+    cached = {"by_variant": by_variant, "sibling_units": sibling_units}
+    if len(_ITEM_CACHE) >= 32:
+        _ITEM_CACHE.clear()
+    _ITEM_CACHE[cache_key] = cached
+    return cached
+
+
 def find_or_create_item_v2(
     conn: Any,
     bid: int,
@@ -146,42 +171,26 @@ def find_or_create_item_v2(
     clean_name, clean_size = split_item_name_size_v2(name, size, unit)
     identity = product_identity(clean_name)
     clean_size_key = _size_identity(clean_size, unit)
-
-    cache_key = (id(conn), bid)
-    candidates = _ITEM_CACHE.get(cache_key)
-    if candidates is None:
-        candidates = [
-            dict(row)
-            for row in conn.execute(
-                "SELECT id,name,size,unit,sku FROM items WHERE business_id=?",
-                (bid,),
-            ).fetchall()
-        ]
-        _ITEM_CACHE[cache_key] = candidates
-
-    # Match product + size before SKU because Vyapar often reuses one Item Code
-    # for several sizes/batches of the same product.
-    for candidate in candidates:
-        if product_identity(candidate["name"]) != identity:
-            continue
-        if _size_identity(candidate["size"], candidate["unit"]) == clean_size_key:
-            return int(candidate["id"])
+    cached = _item_cache(conn, bid)
+    by_variant: dict[tuple[str, str], dict[str, Any]] = cached["by_variant"]
+    existing_variant = by_variant.get((identity, clean_size_key))
+    if existing_variant:
+        return int(existing_variant["id"])
 
     if sku and not clean_size:
         exact_sku = conn.execute(
-            "SELECT id FROM items WHERE business_id=? AND sku=?",
+            "SELECT id,name,size,unit,sku FROM items WHERE business_id=? AND sku=?",
             (bid, sku),
         ).fetchone()
         if exact_sku:
-            return int(exact_sku["id"])
+            item = dict(exact_sku)
+            by_variant.setdefault(
+                (product_identity(item["name"]), _size_identity(item["size"], item["unit"])),
+                item,
+            )
+            return int(item["id"])
 
-    sibling_unit = ""
-    for candidate in candidates:
-        if product_identity(candidate["name"]) == identity:
-            candidate_unit = _normalize_unit(candidate["unit"])
-            if candidate_unit and candidate_unit != "pcs":
-                sibling_unit = candidate_unit
-                break
+    sibling_unit = cached["sibling_units"].get(identity, "")
     normalized_unit = _normalize_unit(unit)
     if (not normalized_unit or normalized_unit == "pcs") and sibling_unit:
         normalized_unit = sibling_unit
@@ -192,15 +201,17 @@ def find_or_create_item_v2(
         "INSERT INTO items(business_id,name,sku,unit,size,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
         (bid, clean_name or "Imported Item", generated_sku, normalized_unit, clean_size, now_iso(), now_iso()),
     )
-    item_id = int(cursor.lastrowid)
-    candidates.append({
-        "id": item_id,
+    item = {
+        "id": int(cursor.lastrowid),
         "name": clean_name or "Imported Item",
         "size": clean_size,
         "unit": normalized_unit,
         "sku": generated_sku,
-    })
-    return item_id
+    }
+    by_variant[(identity, clean_size_key)] = item
+    if normalized_unit and normalized_unit != "pcs":
+        cached["sibling_units"].setdefault(identity, normalized_unit)
+    return int(item["id"])
 
 
 core.split_item_name_size = split_item_name_size_v2
