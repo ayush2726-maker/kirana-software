@@ -63,6 +63,8 @@ import backend.bulk_items_ext  # noqa: F401
 import backend.stable_owner_app_ext  # noqa: F401
 # Adds the customer catalog manager assets to the isolated owner app.
 import backend.customer_catalog_owner_ui_ext  # noqa: F401
+# Fixes catalog API route order and uses only the latest bill from the last 15 days.
+import backend.customer_catalog_15day_fix_ext  # noqa: F401
 
 # Disabled: this response-rewrapping middleware caused Railway upstream errors.
 # import backend.owner_dashboard_session_ext  # noqa: F401
