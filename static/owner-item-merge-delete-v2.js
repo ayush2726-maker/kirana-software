@@ -109,7 +109,17 @@
     var itemId = activeItemId();
     if (!summary || !itemId) return;
 
-    all('.item-merge-delete-wrap', overlay).forEach(function (wrap) { wrap.remove(); });
+    var wraps = all('.item-merge-delete-wrap', overlay);
+    var keep = null;
+    wraps.forEach(function (wrap) {
+      if (!keep && Number(wrap.getAttribute('data-for-item-id') || 0) === itemId) {
+        keep = wrap;
+      } else {
+        wrap.remove();
+      }
+    });
+    if (keep) return;
+
     var wrap = document.createElement('div');
     wrap.className = 'item-merge-delete-wrap';
     wrap.setAttribute('data-for-item-id', String(itemId));
