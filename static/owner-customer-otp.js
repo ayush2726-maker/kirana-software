@@ -1,11 +1,16 @@
 (function () {
   'use strict';
 
+  if (window.__kiranaCustomerOtpModuleLoaded) return;
+  window.__kiranaCustomerOtpModuleLoaded = true;
+
   var requests = [];
   var loading = false;
   var initialized = false;
   var seenIds = new Set();
   var seenStorageKey = 'ks_seen_customer_otp_ids';
+  var pollTimer = null;
+  var lastRenderSignature = '';
 
   function one(selector, root) {
     return (root || document).querySelector(selector);
@@ -30,7 +35,7 @@
   function toast(message, isError) {
     var node = one('#toast') || one('#txn-toast');
     if (!node) {
-      window.alert(message);
+      console[isError ? 'error' : 'log'](message);
       return;
     }
     node.textContent = String(message || 'Done');
@@ -38,26 +43,36 @@
     window.clearTimeout(toast.timer);
     toast.timer = window.setTimeout(function () {
       node.className = node.id === 'txn-toast' ? 'txn-toast' : 'toast';
-    }, 5000);
+    }, 4000);
   }
 
   async function api(path, options) {
     var config = options || {};
-    var response = await fetch(path, {
-      method: config.method || 'GET',
-      headers: { Accept: 'application/json' },
-      credentials: 'include',
-      cache: 'no-store'
-    });
-    var data = response.status === 204 ? null : await response.json().catch(function () { return null; });
-    if (response.status === 401) {
-      window.location.replace('/owner-login');
-      throw new Error('Owner session expired');
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timeout = window.setTimeout(function () {
+      if (controller) controller.abort();
+    }, 8000);
+
+    try {
+      var response = await fetch(path, {
+        method: config.method || 'GET',
+        headers: { Accept: 'application/json' },
+        credentials: 'include',
+        cache: 'no-store',
+        signal: controller ? controller.signal : undefined
+      });
+      var data = response.status === 204 ? null : await response.json().catch(function () { return null; });
+      if (response.status === 401) {
+        window.location.replace('/owner-login');
+        throw new Error('Owner session expired');
+      }
+      if (!response.ok) {
+        throw new Error(data && data.detail ? data.detail : 'Request failed (' + response.status + ')');
+      }
+      return data;
+    } finally {
+      window.clearTimeout(timeout);
     }
-    if (!response.ok) {
-      throw new Error(data && data.detail ? data.detail : 'Request failed (' + response.status + ')');
-    }
-    return data;
   }
 
   function loadSeenIds() {
@@ -87,8 +102,12 @@
         badge.setAttribute('aria-label', 'Pending OTP requests');
         button.appendChild(badge);
       }
-      badge.textContent = String(requests.length);
-      badge.classList.toggle('hidden', requests.length === 0);
+      var nextText = String(requests.length);
+      if (badge.textContent !== nextText) badge.textContent = nextText;
+      var shouldHide = requests.length === 0;
+      if (badge.classList.contains('hidden') !== shouldHide) {
+        badge.classList.toggle('hidden', shouldHide);
+      }
     });
   }
 
@@ -106,7 +125,8 @@
   function updateAlertButton() {
     var button = one('[data-action="enable-customer-otp-alerts"]');
     if (!button) return;
-    button.textContent = alertButtonLabel();
+    var label = alertButtonLabel();
+    if (button.textContent !== label) button.textContent = label;
     button.disabled = alertsSupported() && Notification.permission === 'denied';
   }
 
@@ -148,12 +168,18 @@
     return minutes + 'm ' + rest + 's remaining';
   }
 
-  function render() {
+  function render(force) {
     var panel = ensurePanel();
     ensureBadge();
     if (!panel) return;
     var host = one('#customer-otp-list', panel);
     if (!host) return;
+
+    var signature = JSON.stringify(requests.map(function (item) {
+      return [item.id, item.status, item.expires_at, item.otp_code];
+    }));
+    if (!force && initialized && signature === lastRenderSignature) return;
+    lastRenderSignature = signature;
 
     if (loading && !initialized) {
       host.innerHTML = '<div class="customer-otp-empty">Loading OTP requests...</div>';
@@ -234,20 +260,20 @@
   }
 
   async function loadRequests(showErrors) {
-    if (loading) return;
+    if (loading || document.hidden) return;
     loading = true;
-    render();
+    if (!initialized) render(true);
     try {
       var next = await api('/api/customer/otp-requests');
       next = Array.isArray(next) ? next : [];
       announceNewRequests(next);
       requests = next;
     } catch (error) {
-      if (showErrors !== false) toast(error.message, true);
+      if (showErrors !== false && error.name !== 'AbortError') toast(error.message, true);
     } finally {
       loading = false;
       initialized = true;
-      render();
+      render(false);
     }
   }
 
@@ -274,7 +300,8 @@
     try {
       await api('/api/customer/otp-requests/' + Number(id), { method: 'DELETE' });
       requests = requests.filter(function (row) { return Number(row.id) !== Number(id); });
-      render();
+      lastRenderSignature = '';
+      render(true);
       toast('OTP request cancelled');
     } catch (error) {
       toast(error.message, true);
@@ -283,7 +310,7 @@
 
   async function enableAlerts() {
     if (!alertsSupported()) {
-      toast('In-app OTP alerts are already active.');
+      toast('In-app OTP alerts are active.');
       return;
     }
     if (Notification.permission === 'denied') {
@@ -332,23 +359,29 @@
     if (ordersButton) {
       window.setTimeout(function () {
         ensurePanel();
+        render(true);
         loadRequests(false);
       }, 120);
     }
   }, true);
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) loadRequests(false);
+  });
+
+  window.addEventListener('pagehide', function () {
+    if (pollTimer) window.clearInterval(pollTimer);
+    pollTimer = null;
+  }, { once: true });
 
   function boot() {
     loadSeenIds();
     ensurePanel();
     ensureBadge();
     loadRequests(false);
-    window.setInterval(function () {
+    pollTimer = window.setInterval(function () {
       loadRequests(false);
-    }, 15000);
-    new MutationObserver(function () {
-      ensurePanel();
-      ensureBadge();
-    }).observe(document.body, { childList: true, subtree: true });
+    }, 20000);
   }
 
   boot();
