@@ -9,7 +9,7 @@ import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "129"
+VERSION = "130"
 ASSET = STATIC_DIR / "owner-item-bill-open.js"
 ASSET_URL = f"/owner-item-bill-open.js?v={VERSION}"
 
