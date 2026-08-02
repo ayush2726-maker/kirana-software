@@ -65,6 +65,10 @@ import backend.stable_owner_app_ext  # noqa: F401
 import backend.customer_catalog_owner_ui_ext  # noqa: F401
 # Fixes catalog API route order and uses only the latest bill from the last 15 days.
 import backend.customer_catalog_15day_fix_ext  # noqa: F401
+# Scopes customer login to the shared shop and adds owner WhatsApp link sharing.
+import backend.customer_login_share_fix_ext  # noqa: F401
+# Prevents an expired request from clearing a newly completed customer login.
+import backend.customer_login_race_fix_ext  # noqa: F401
 
 # Disabled: this response-rewrapping middleware caused Railway upstream errors.
 # import backend.owner_dashboard_session_ext  # noqa: F401
