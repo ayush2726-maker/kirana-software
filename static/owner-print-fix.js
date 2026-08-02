@@ -42,17 +42,20 @@
     var cards = visibleTransactionCards();
     if (!bar || !cards.length) return;
 
-    bar.classList.remove('hidden');
-    bar.classList.add('txn-bulk-always');
+    if (bar.classList.contains('hidden')) bar.classList.remove('hidden');
+    if (!bar.classList.contains('txn-bulk-always')) bar.classList.add('txn-bulk-always');
 
     var count = selectedCount();
+    var countText = String(count);
     var countNode = one('#txn-selected-count', bar);
-    if (countNode) countNode.textContent = String(count);
+    if (countNode && countNode.textContent !== countText) countNode.textContent = countText;
 
     var printButton = one('[data-txn-bulk-print]', bar);
     if (printButton) {
-      printButton.textContent = '🖨 Bulk Print (' + count + ')';
-      printButton.setAttribute('aria-label', count ? 'Print ' + count + ' selected transactions' : 'Select transactions, then bulk print');
+      var label = '🖨 Bulk Print (' + count + ')';
+      var aria = count ? 'Print ' + count + ' selected transactions' : 'Select transactions, then bulk print';
+      if (printButton.textContent !== label) printButton.textContent = label;
+      if (printButton.getAttribute('aria-label') !== aria) printButton.setAttribute('aria-label', aria);
     }
   }
 
