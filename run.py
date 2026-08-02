@@ -69,6 +69,8 @@ import backend.customer_catalog_15day_fix_ext  # noqa: F401
 import backend.customer_login_share_fix_ext  # noqa: F401
 # Prevents an expired request from clearing a newly completed customer login.
 import backend.customer_login_race_fix_ext  # noqa: F401
+# Registration/reset OTP flow plus owner OTP request alerts and WhatsApp sending.
+import backend.customer_registration_reset_ext  # noqa: F401
 
 # Disabled: this response-rewrapping middleware caused Railway upstream errors.
 # import backend.owner_dashboard_session_ext  # noqa: F401
