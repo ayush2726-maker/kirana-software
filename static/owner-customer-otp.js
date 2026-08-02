@@ -3,9 +3,16 @@
 
   var requests = [];
   var loading = false;
+  var initialized = false;
+  var seenIds = new Set();
+  var seenStorageKey = 'ks_seen_customer_otp_ids';
 
   function one(selector, root) {
     return (root || document).querySelector(selector);
+  }
+
+  function all(selector, root) {
+    return Array.prototype.slice.call((root || document).querySelectorAll(selector));
   }
 
   function esc(value) {
@@ -31,7 +38,7 @@
     window.clearTimeout(toast.timer);
     toast.timer = window.setTimeout(function () {
       node.className = node.id === 'txn-toast' ? 'txn-toast' : 'toast';
-    }, 4000);
+    }, 5000);
   }
 
   async function api(path, options) {
@@ -53,11 +60,64 @@
     return data;
   }
 
+  function loadSeenIds() {
+    try {
+      var values = JSON.parse(localStorage.getItem(seenStorageKey) || '[]');
+      seenIds = new Set(Array.isArray(values) ? values.map(Number) : []);
+    } catch (error) {
+      seenIds = new Set();
+    }
+  }
+
+  function saveSeenIds() {
+    try {
+      var values = Array.from(seenIds).slice(-300);
+      localStorage.setItem(seenStorageKey, JSON.stringify(values));
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  function ensureBadge() {
+    all('[data-page="orders"]').forEach(function (button) {
+      var badge = one('.customer-otp-badge', button);
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'customer-otp-badge hidden';
+        badge.setAttribute('aria-label', 'Pending OTP requests');
+        button.appendChild(badge);
+      }
+      badge.textContent = String(requests.length);
+      badge.classList.toggle('hidden', requests.length === 0);
+    });
+  }
+
+  function alertsSupported() {
+    return typeof window.Notification !== 'undefined';
+  }
+
+  function alertButtonLabel() {
+    if (!alertsSupported()) return 'In-App Alerts Active';
+    if (Notification.permission === 'granted') return 'Phone Alerts Active';
+    if (Notification.permission === 'denied') return 'Phone Alerts Blocked';
+    return 'Enable Phone Alerts';
+  }
+
+  function updateAlertButton() {
+    var button = one('[data-action="enable-customer-otp-alerts"]');
+    if (!button) return;
+    button.textContent = alertButtonLabel();
+    button.disabled = alertsSupported() && Notification.permission === 'denied';
+  }
+
   function ensurePanel() {
     var page = one('#page-orders');
     if (!page) return null;
     var existing = one('#customer-otp-panel', page);
-    if (existing) return existing;
+    if (existing) {
+      updateAlertButton();
+      return existing;
+    }
 
     var infoCard = one('.info-card', page);
     var panel = document.createElement('article');
@@ -66,12 +126,16 @@
     panel.innerHTML =
       '<div class="customer-otp-heading">' +
         '<div><small>CUSTOMER REGISTRATION</small><h2>OTP Requests</h2><p>Send the OTP to the customer on WhatsApp. OTP is valid for 10 minutes.</p></div>' +
-        '<button type="button" data-action="refresh-customer-otps">Refresh</button>' +
+        '<div class="customer-otp-heading-actions">' +
+          '<button type="button" data-action="enable-customer-otp-alerts">' + esc(alertButtonLabel()) + '</button>' +
+          '<button type="button" data-action="refresh-customer-otps">Refresh</button>' +
+        '</div>' +
       '</div>' +
       '<div id="customer-otp-list" class="customer-otp-list"><div class="customer-otp-empty">Loading OTP requests...</div></div>';
 
     if (infoCard && infoCard.parentNode) infoCard.parentNode.insertBefore(panel, infoCard.nextSibling);
     else page.appendChild(panel);
+    updateAlertButton();
     return panel;
   }
 
@@ -86,11 +150,12 @@
 
   function render() {
     var panel = ensurePanel();
+    ensureBadge();
     if (!panel) return;
     var host = one('#customer-otp-list', panel);
     if (!host) return;
 
-    if (loading) {
+    if (loading && !initialized) {
       host.innerHTML = '<div class="customer-otp-empty">Loading OTP requests...</div>';
       return;
     }
@@ -113,17 +178,75 @@
     }).join('');
   }
 
+  function systemNotification(item) {
+    var title = 'New Customer OTP Request';
+    var body = (item.party_name || 'Customer') + ' · ' + (item.phone || '') + ' · OTP ' + (item.otp_code || '');
+
+    try {
+      if (window.KiranaNative && typeof window.KiranaNative.notifyOtp === 'function') {
+        window.KiranaNative.notifyOtp(title, body);
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+    }
+
+    if (alertsSupported() && Notification.permission === 'granted') {
+      try {
+        var notification = new Notification(title, {
+          body: body,
+          tag: 'customer-otp-' + Number(item.id),
+          requireInteraction: true
+        });
+        notification.onclick = function () {
+          window.focus();
+          var orders = one('[data-page="orders"]');
+          if (orders) orders.click();
+          notification.close();
+        };
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }
+
+  function announceNewRequests(nextRequests) {
+    if (!initialized) {
+      nextRequests.forEach(function (item) { seenIds.add(Number(item.id)); });
+      saveSeenIds();
+      return;
+    }
+
+    var fresh = nextRequests.filter(function (item) {
+      return !seenIds.has(Number(item.id));
+    });
+    if (!fresh.length) return;
+
+    fresh.forEach(function (item) {
+      seenIds.add(Number(item.id));
+      systemNotification(item);
+    });
+    saveSeenIds();
+
+    var newest = fresh[0];
+    toast('New OTP request: ' + (newest.party_name || 'Customer') + ' (' + (newest.phone || '') + ')');
+    if (navigator.vibrate) navigator.vibrate([250, 120, 250]);
+  }
+
   async function loadRequests(showErrors) {
     if (loading) return;
     loading = true;
     render();
     try {
-      requests = await api('/api/customer/otp-requests');
+      var next = await api('/api/customer/otp-requests');
+      next = Array.isArray(next) ? next : [];
+      announceNewRequests(next);
+      requests = next;
     } catch (error) {
-      requests = [];
       if (showErrors !== false) toast(error.message, true);
     } finally {
       loading = false;
+      initialized = true;
       render();
     }
   }
@@ -158,7 +281,32 @@
     }
   }
 
+  async function enableAlerts() {
+    if (!alertsSupported()) {
+      toast('In-app OTP alerts are already active.');
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      toast('Phone notifications are blocked. Enable notifications for Kirana Software in phone settings.', true);
+      return;
+    }
+    try {
+      var permission = await Notification.requestPermission();
+      updateAlertButton();
+      toast(permission === 'granted' ? 'Phone OTP alerts enabled' : 'In-app alerts will continue');
+    } catch (error) {
+      toast('In-app OTP alerts are active');
+    }
+  }
+
   document.addEventListener('click', function (event) {
+    var alerts = event.target.closest('[data-action="enable-customer-otp-alerts"]');
+    if (alerts) {
+      event.preventDefault();
+      enableAlerts();
+      return;
+    }
+
     var refresh = event.target.closest('[data-action="refresh-customer-otps"]');
     if (refresh) {
       event.preventDefault();
@@ -190,14 +338,16 @@
   }, true);
 
   function boot() {
+    loadSeenIds();
     ensurePanel();
+    ensureBadge();
     loadRequests(false);
     window.setInterval(function () {
-      var page = one('#page-orders');
-      if (page && page.classList.contains('active')) loadRequests(false);
-    }, 30000);
+      loadRequests(false);
+    }, 15000);
     new MutationObserver(function () {
       ensurePanel();
+      ensureBadge();
     }).observe(document.body, { childList: true, subtree: true });
   }
 
