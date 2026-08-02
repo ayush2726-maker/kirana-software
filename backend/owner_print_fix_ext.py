@@ -14,7 +14,7 @@ import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "127"
+VERSION = "128"
 ASSET = STATIC_DIR / "owner-print-fix.js"
 ASSET_URL = f"/owner-print-fix.js?v={VERSION}"
 
