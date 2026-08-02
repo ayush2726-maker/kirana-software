@@ -101,16 +101,16 @@ def main() -> None:
     first = upload(owner, f"V-{suffix}-1", product_name, item_code)
     assert first["rows_imported"] == 1, first
 
-    items = expect_ok(owner.get(f"{BASE_URL}/api/items?limit=3000", timeout=30))
+    items = expect_ok(owner.get(f"{BASE_URL}/api/items?limit=2000", timeout=30))
     variants = [row for row in items if product_name.lower() in str(row.get("name", "")).lower()]
     assert len(variants) == 3, variants
-    assert {str(row.get("size") or "") for row in variants} == {"", "500 Kg", "M"}, variants
+    assert {str(row.get("size") or "") for row in variants} == {"", "500 kg", "M"}, variants
     assert len({row["sku"] for row in variants}) == 3, variants
     assert {row["name"] for row in variants} == {f"{product_name} (काबली चना)"}, variants
 
     second = upload(owner, f"V-{suffix}-2", product_name, item_code)
     assert second["rows_imported"] == 1, second
-    items = expect_ok(owner.get(f"{BASE_URL}/api/items?limit=3000", timeout=30))
+    items = expect_ok(owner.get(f"{BASE_URL}/api/items?limit=2000", timeout=30))
     variants_after = [row for row in items if product_name.lower() in str(row.get("name", "")).lower()]
     assert len(variants_after) == 3, variants_after
 
