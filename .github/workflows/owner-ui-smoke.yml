@@ -12,6 +12,9 @@ on:
       - "static/owner-customer-catalog.*"
       - "static/owner-customer-share.*"
       - "static/owner-customer-otp.*"
+      - "static/owner-transaction-detail.js"
+      - "static/owner-transaction-actions.js"
+      - "static/owner-import-center.js"
       - "static/customer-order.js"
       - "static/customer-self-register.js"
       - "static/owner-bulk-items.*"
@@ -76,13 +79,29 @@ jobs:
           node --check static/owner-customer-catalog.js
           node --check static/owner-customer-share.js
           node --check static/owner-customer-otp.js
+          node --check static/owner-transaction-detail.js
+          node --check static/owner-transaction-actions.js
+          node --check static/owner-import-center.js
           node --check static/customer-order.js
           node --check static/customer-self-register.js
           node --check static/owner-bulk-items.js
           node --check static/owner-bulk-errors.js
           node --check static/owner-back-navigation.js
           node --check plugins/withNativeKiranaActivityV3.js
-          python -m py_compile backend/stable_owner_app_ext.py backend/owner_boot_recovery_ext.py backend/customer_catalog_manager_ext.py backend/customer_catalog_owner_ui_ext.py backend/customer_catalog_15day_fix_ext.py backend/customer_login_share_fix_ext.py backend/customer_login_race_fix_ext.py backend/customer_registration_reset_ext.py backend/bulk_items_ext.py tests/owner_ui_smoke.py tests/owner_boot_recovery_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py tests/customer_catalog_manager_smoke.py tests/customer_login_share_smoke.py tests/customer_multi_shop_smoke.py
+          python -m py_compile backend/stable_owner_app_ext.py backend/owner_boot_recovery_ext.py backend/customer_catalog_manager_ext.py backend/customer_catalog_owner_ui_ext.py backend/customer_catalog_15day_fix_ext.py backend/customer_login_share_fix_ext.py backend/customer_login_race_fix_ext.py backend/customer_registration_reset_ext.py backend/bulk_items_ext.py backend/transaction_detail_ui_ext.py backend/transaction_share_print_ui_ext.py backend/owner_import_center_ext.py tests/owner_ui_smoke.py tests/owner_boot_recovery_smoke.py tests/bulk_items_smoke.py tests/credit_link_smoke.py tests/customer_catalog_manager_smoke.py tests/customer_login_share_smoke.py tests/customer_multi_shop_smoke.py
+
+      - name: Verify final owner bundle includes new controls
+        run: |
+          python - <<'PY'
+          import run  # noqa: F401
+          import backend.owner_final_inline_ext as final_owner
+          html = final_owner.final_owner_html()
+          assert 'data-owner-inline="owner-transaction-detail.js"' in html
+          assert 'data-owner-inline="owner-transaction-actions.js"' in html
+          assert 'data-owner-inline="owner-import-center.js"' in html
+          assert 'data-transaction-id' in html
+          print('FINAL_OWNER_BUNDLE_OK')
+          PY
 
       - name: Start Kirana server
         run: |
