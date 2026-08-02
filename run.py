@@ -17,6 +17,8 @@ import backend.vyapar_exact_ext  # noqa: F401
 import backend.activity_navigation_ext  # noqa: F401
 # Opens sale, purchase, return, payment, expense and document details from transaction lists.
 import backend.transaction_detail_ext  # noqa: F401
+# Creates public WhatsApp bill links and owner bulk-print pages.
+import backend.transaction_share_print_ext  # noqa: F401
 # Groups every invoice's item rows, detects old item-wise duplicate imports and adds the Sale item picker.
 import backend.sale_workflow_ext  # noqa: F401
 # Always exposes a strict manual cleanup for old SaleReport item-wise invoice imports.
@@ -74,6 +76,8 @@ import backend.owner_final_inline_ext  # noqa: F401
 import backend.native_owner_app_ext  # noqa: F401
 # Adds transaction detail popup to browser and Android owner apps.
 import backend.transaction_detail_ui_ext  # noqa: F401
+# Adds WhatsApp share, per-transaction print and bulk-print controls.
+import backend.transaction_share_print_ui_ext  # noqa: F401
 # Makes OTP expiry/refresh independent of the phone timezone.
 import backend.customer_otp_refresh_fix_ext  # noqa: F401
 
