@@ -5,10 +5,11 @@ from fastapi.responses import HTMLResponse, Response
 
 from backend.app import STATIC_DIR, app
 import backend.native_owner_app_ext as native_owner
+import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "122"
+VERSION = "123"
 ACTIONS_JS = STATIC_DIR / "owner-transaction-actions.js"
 ASSET_URL = f"/owner-transaction-actions.js?v={VERSION}"
 
@@ -30,9 +31,12 @@ def patched_owner_js_with_transaction_ids() -> str:
 
 stable_owner.patched_owner_js = patched_owner_js_with_transaction_ids
 stable_owner.VERSION = VERSION
+final_owner.BUILD = VERSION
 
 if ASSET_URL not in native_owner.OPTIONAL_JS_URLS:
     native_owner.OPTIONAL_JS_URLS.append(ASSET_URL)
+if ACTIONS_JS not in final_owner.JS_FILES:
+    final_owner.JS_FILES.append(ACTIONS_JS)
 
 
 _original_stable_owner_page = stable_owner.stable_owner_page
