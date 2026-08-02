@@ -9,7 +9,7 @@ import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "131"
+VERSION = "133"
 ASSET = STATIC_DIR / "owner-item-merge-delete.js"
 ASSET_URL = f"/owner-item-merge-delete.js?v={VERSION}"
 
