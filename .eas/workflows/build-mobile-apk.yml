@@ -14,6 +14,7 @@ on:
       - 'mobile/eas.json'
       - 'scripts/generate-mobile-assets.js'
       - 'plugins/withNativeKiranaActivityV2.js'
+      - 'plugins/withNativeKiranaActivityV3.js'
       - '.eas/workflows/build-mobile-apk.yml'
 
 concurrency:
@@ -31,4 +32,4 @@ jobs:
     params:
       platform: android
       profile: preview
-      message: Kirana Software Mobile 1.0.3 Full Screen Native APK
+      message: Kirana Software Mobile 1.0.4 Bulk Items and Back Navigation APK
