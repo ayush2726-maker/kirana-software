@@ -2,20 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import Body, Depends, HTTPException
 
 from backend.app import app, current_user, db, now_iso, today_iso
 import backend.bill_edit_ext as bill_edit
 
 
-VERSION = "132"
+VERSION = "133"
 _ORIGINAL_LOAD_BILL = bill_edit._load_bill
 _ORIGINAL_DETAIL = bill_edit._detail
-
-
-class MergeDeleteIn(BaseModel):
-    target_item_id: int | None = None
 
 
 def _clean(value: Any) -> str:
@@ -102,15 +97,71 @@ bill_edit._load_bill = _patched_load_bill
 bill_edit._detail = _patched_detail
 
 
+def _payload_target(payload: Any) -> int | None:
+    if not isinstance(payload, dict):
+        return None
+    raw = payload.get("target_item_id")
+    if raw in (None, "", 0, "0"):
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid merge target")
+    return value if value > 0 else None
+
+
+def _repair_stale_bill_links(conn: Any, business_id: int, source: dict[str, Any]) -> int:
+    """Move stale bill-line pointers away from a size that was already replaced.
+
+    Old imported rows can retain the old item_id after their visible name/size was
+    edited to another variant. Such a stale pointer should not block deleting the
+    now-unused variant.
+    """
+    source_id = int(source["id"])
+    source_name = _clean(source.get("name"))
+    source_size = _clean(source.get("size"))
+    repaired = 0
+    for table in ("sale_items", "purchase_items", "return_items"):
+        rows = conn.execute(
+            f"SELECT id,item_name,size FROM {table} WHERE item_id=?",
+            (source_id,),
+        ).fetchall()
+        for row in rows:
+            line_name = _clean(row["item_name"])
+            line_size = _clean(row["size"])
+            if line_name == source_name and line_size == source_size:
+                continue
+            candidates = conn.execute(
+                """
+                SELECT id FROM items
+                WHERE business_id=? AND id<>?
+                  AND lower(trim(name))=?
+                  AND lower(trim(COALESCE(size,'')))=?
+                ORDER BY id
+                LIMIT 2
+                """,
+                (business_id, source_id, line_name, line_size),
+            ).fetchall()
+            if len(candidates) == 1:
+                conn.execute(
+                    f"UPDATE {table} SET item_id=? WHERE id=?",
+                    (int(candidates[0]["id"]), int(row["id"])),
+                )
+                repaired += 1
+    return repaired
+
+
 @app.post("/api/items/{item_id}/merge-delete")
 def merge_delete_unused_variant(
     item_id: int,
-    payload: MergeDeleteIn,
+    payload: dict[str, Any] | None = Body(default=None),
     user: dict[str, Any] = Depends(current_user),
 ) -> dict[str, Any]:
     if user.get("role") == "viewer":
         raise HTTPException(status_code=403, detail="Viewer cannot delete items")
     business_id = int(user["business_id"])
+    target_item_id = _payload_target(payload)
+
     with db() as conn:
         source_row = conn.execute(
             "SELECT * FROM items WHERE id=? AND business_id=?",
@@ -120,6 +171,7 @@ def merge_delete_unused_variant(
             raise HTTPException(status_code=404, detail="Item not found")
         source = dict(source_row)
 
+        repaired_links = _repair_stale_bill_links(conn, business_id, source)
         used = conn.execute(
             """
             SELECT 1 FROM sale_items WHERE item_id=?
@@ -132,17 +184,17 @@ def merge_delete_unused_variant(
         if used:
             raise HTTPException(
                 status_code=409,
-                detail="Item abhi kisi bill me laga hua hai. Pehle us bill se item badlein.",
+                detail="Ye size abhi kisi purane bill me laga hua hai. Us bill ko kholkar item badalne ke baad delete karein.",
             )
 
         source_stock = round(float(source.get("stock") or 0), 4)
         target: dict[str, Any] | None = None
-        if payload.target_item_id:
-            if int(payload.target_item_id) == item_id:
+        if target_item_id:
+            if target_item_id == item_id:
                 raise HTTPException(status_code=400, detail="Same item me merge nahi kar sakte")
             target_row = conn.execute(
                 "SELECT * FROM items WHERE id=? AND business_id=?",
-                (int(payload.target_item_id), business_id),
+                (target_item_id, business_id),
             ).fetchone()
             if not target_row:
                 raise HTTPException(status_code=404, detail="Merge target item not found")
@@ -189,6 +241,7 @@ def merge_delete_unused_variant(
         "merged_into_id": int(target["id"]) if target else None,
         "transferred_stock": source_stock if target else 0,
         "target_stock": target_stock,
+        "repaired_stale_bill_links": repaired_links,
     }
 
 
