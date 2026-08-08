@@ -4,10 +4,11 @@ import json
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 
-VERSION = "143"
+VERSION = "144"
+MIN_SCORE = 0.18
 
 
 def _box_values(box):
@@ -39,39 +40,18 @@ def _result_dict(result):
     return nested if isinstance(nested, dict) else payload
 
 
-def main() -> int:
-    if len(sys.argv) < 2:
-        print("KIRANA_JSON:" + json.dumps({"error": "image path missing"}))
-        return 2
-    image_path = Path(sys.argv[1])
-    if not image_path.exists():
-        print("KIRANA_JSON:" + json.dumps({"error": "image not found"}))
-        return 2
+def _enhance(image: Image.Image) -> Image.Image:
+    gray = ImageOps.grayscale(image)
+    gray = ImageOps.autocontrast(gray, cutoff=1)
+    gray = ImageEnhance.Contrast(gray).enhance(1.55)
+    gray = ImageEnhance.Sharpness(gray).enhance(1.25)
+    gray = gray.filter(ImageFilter.SHARPEN)
+    return gray.convert("RGB")
 
-    from paddleocr import PaddleOCR
+
+def _predict(model, image):
     import numpy as np
 
-    image = Image.open(image_path)
-    image = ImageOps.exif_transpose(image).convert("RGB")
-    max_side = max(image.width, image.height)
-    if max_side > 3200:
-        scale = 3200.0 / max_side
-        image = image.resize((max(1, int(image.width * scale)), max(1, int(image.height * scale))))
-
-    # PP-OCRv5 selects the dedicated Devanagari recognizer for lang="hi".
-    # It supports Hindi/Devanagari plus English and numeric text, which matches
-    # handwritten kirana notes much better than the old PP-OCRv3 Hindi model.
-    model = PaddleOCR(
-        lang="hi",
-        ocr_version="PP-OCRv5",
-        use_doc_orientation_classify=False,
-        use_doc_unwarping=False,
-        use_textline_orientation=False,
-        device="cpu",
-        enable_mkldnn=True,
-        cpu_threads=2,
-        text_rec_score_thresh=0.18,
-    )
     outputs = model.predict(np.asarray(image))
     fragments = []
     for output in outputs:
@@ -84,10 +64,59 @@ def main() -> int:
             if not text:
                 continue
             score = float(scores[index]) if index < len(scores) else 0.0
-            if score < 0.18:
+            if score < MIN_SCORE:
                 continue
             box = _box_values(boxes[index]) if index < len(boxes) else None
             fragments.append({"text": text, "score": score, "box": box})
+    return fragments
+
+
+def _variant_score(rows):
+    if not rows:
+        return 0.0
+    average = sum(float(row.get("score") or 0.0) for row in rows) / len(rows)
+    useful = sum(1 for row in rows if len(str(row.get("text") or "").strip()) >= 2)
+    return useful * 1.8 + len(rows) * 0.4 + average * 5.0
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print("KIRANA_JSON:" + json.dumps({"error": "image path missing"}))
+        return 2
+    image_path = Path(sys.argv[1])
+    if not image_path.exists():
+        print("KIRANA_JSON:" + json.dumps({"error": "image not found"}))
+        return 2
+
+    from paddleocr import PaddleOCR
+
+    image = Image.open(image_path)
+    image = ImageOps.exif_transpose(image).convert("RGB")
+    max_side = max(image.width, image.height)
+    if max_side > 2600:
+        scale = 2600.0 / max_side
+        image = image.resize((max(1, int(image.width * scale)), max(1, int(image.height * scale))))
+
+    model = PaddleOCR(
+        lang="hi",
+        ocr_version="PP-OCRv5",
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
+        device="cpu",
+        enable_mkldnn=True,
+        cpu_threads=2,
+        text_rec_score_thresh=MIN_SCORE,
+    )
+
+    original_rows = _predict(model, image)
+    enhanced_rows = _predict(model, _enhance(image))
+    if _variant_score(enhanced_rows) > _variant_score(original_rows):
+        fragments = enhanced_rows
+        preprocessing = "autocontrast"
+    else:
+        fragments = original_rows
+        preprocessing = "original"
 
     print(
         "KIRANA_JSON:"
@@ -97,6 +126,7 @@ def main() -> int:
                 "height": image.height,
                 "fragments": fragments,
                 "model": "PP-OCRv5-hi-devanagari",
+                "preprocessing": preprocessing,
                 "version": VERSION,
             },
             ensure_ascii=False,
