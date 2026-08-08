@@ -28,47 +28,66 @@
     button.id = 'owner-smart-photo-button';
     button.type = 'button';
     button.className = 'round-button';
-    button.setAttribute('aria-label', 'Smart Billing');
-    button.setAttribute('title', 'Smart Billing');
+    button.setAttribute('aria-label', 'Quick Write Bill');
+    button.setAttribute('title', 'Quick Write Bill');
     button.textContent = '✍️';
     var settings = topbar.querySelector('[data-page="settings"]');
     if (settings) topbar.insertBefore(button, settings);
     else topbar.appendChild(button);
-    button.addEventListener('click', function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      window.location.assign('/owner/quick-bill');
-    });
-  }
-
-  function bind() {
-    document.querySelectorAll('[data-smart-photo]').forEach(function (button) {
-      if (button.dataset.boundSmartTool) return;
-      button.dataset.boundSmartTool = '1';
-      button.addEventListener('click', function () { window.location.assign('/owner/smart-tools#photo'); });
-    });
-    document.querySelectorAll('[data-smart-quick]').forEach(function (button) {
-      if (button.dataset.boundSmartTool) return;
-      button.dataset.boundSmartTool = '1';
-      button.addEventListener('click', function () { window.location.assign('/owner/quick-bill'); });
-    });
-    document.querySelectorAll('[data-smart-barcode]').forEach(function (button) {
-      if (button.dataset.boundSmartTool) return;
-      button.dataset.boundSmartTool = '1';
-      button.addEventListener('click', function () { window.location.assign('/owner/smart-tools#barcode'); });
-    });
   }
 
   function install() {
     addTopButton();
     addMenuButtons(document.querySelector('#page-menu .menu-list'));
     addMenuButtons(document.querySelector('#page-settings .menu-list'));
-    bind();
   }
+
+  // Use one capture-phase delegated click handler. The owner app re-renders its
+  // menu after opening it, so per-element listeners were getting destroyed and
+  // the underlying native menu click won the race. Capture + stopImmediatePropagation
+  // guarantees Smart Billing buttons navigate to their real standalone routes.
+  document.addEventListener('click', function (event) {
+    var target = event.target && event.target.closest ? event.target.closest('[data-smart-photo],[data-smart-quick],[data-smart-barcode],#owner-smart-photo-button') : null;
+    if (!target) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+
+    if (target.matches('[data-smart-quick],#owner-smart-photo-button')) {
+      window.location.href = '/owner/quick-bill?v=147';
+      return;
+    }
+    if (target.matches('[data-smart-photo]')) {
+      window.location.href = '/owner/smart-tools?build=147#photo';
+      return;
+    }
+    if (target.matches('[data-smart-barcode]')) {
+      window.location.href = '/owner/smart-tools?build=147#barcode';
+    }
+  }, true);
 
   function boot() {
     install();
-    [250, 700, 1500, 3000].forEach(function (delay) { window.setTimeout(install, delay); });
+    [50, 150, 300, 600, 1000, 1800, 3000].forEach(function (delay) {
+      window.setTimeout(install, delay);
+    });
+
+    // The native owner UI replaces the whole Menu DOM a few seconds after
+    // opening. Observe those replacements and immediately restore Smart Billing
+    // entries so the menu no longer flips back to the old list.
+    if (window.MutationObserver && document.documentElement) {
+      var queued = false;
+      var observer = new MutationObserver(function () {
+        if (queued) return;
+        queued = true;
+        window.requestAnimationFrame(function () {
+          queued = false;
+          install();
+        });
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      window.__kiranaSmartToolsObserver = observer;
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
