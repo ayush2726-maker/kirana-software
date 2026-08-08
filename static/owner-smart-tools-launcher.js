@@ -42,39 +42,30 @@
     addMenuButtons(document.querySelector('#page-settings .menu-list'));
   }
 
-  // Use one capture-phase delegated click handler. The owner app re-renders its
-  // menu after opening it, so per-element listeners were getting destroyed and
-  // the underlying native menu click won the race. Capture + stopImmediatePropagation
-  // guarantees Smart Billing buttons navigate to their real standalone routes.
-  document.addEventListener('click', function (event) {
-    var target = event.target && event.target.closest ? event.target.closest('[data-smart-photo],[data-smart-quick],[data-smart-barcode],#owner-smart-photo-button') : null;
-    if (!target) return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+  function go(url, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+    }
+    window.location.assign(url);
+  }
 
-    if (target.matches('[data-smart-quick],#owner-smart-photo-button')) {
-      window.location.href = '/owner/quick-bill?v=147';
-      return;
-    }
-    if (target.matches('[data-smart-photo]')) {
-      window.location.href = '/owner/smart-tools?build=147#photo';
-      return;
-    }
-    if (target.matches('[data-smart-barcode]')) {
-      window.location.href = '/owner/smart-tools?build=147#barcode';
-    }
+  function smartTarget(event) {
+    return event.target && event.target.closest ? event.target.closest('[data-smart-photo],[data-smart-quick],[data-smart-barcode],#owner-smart-photo-button') : null;
+  }
+
+  document.addEventListener('click', function (event) {
+    var target = smartTarget(event);
+    if (!target) return;
+    if (target.matches('[data-smart-quick],#owner-smart-photo-button')) return go('/owner/quick-bill?v=149', event);
+    if (target.matches('[data-smart-photo]')) return go('/owner/smart-tools?build=149#photo', event);
+    if (target.matches('[data-smart-barcode]')) return go('/owner/smart-tools?build=149#barcode', event);
   }, true);
 
   function boot() {
     install();
-    [50, 150, 300, 600, 1000, 1800, 3000].forEach(function (delay) {
-      window.setTimeout(install, delay);
-    });
-
-    // The native owner UI replaces the whole Menu DOM a few seconds after
-    // opening. Observe those replacements and immediately restore Smart Billing
-    // entries so the menu no longer flips back to the old list.
+    [50, 150, 300, 600, 1000, 1800, 3000].forEach(function (delay) { window.setTimeout(install, delay); });
     if (window.MutationObserver && document.documentElement) {
       var queued = false;
       var observer = new MutationObserver(function () {
