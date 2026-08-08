@@ -17,15 +17,14 @@ import backend.local_handwriting_ai_ext as local
 import backend.photo_bill_barcode_ext as legacy
 
 
-VERSION = "141"
+VERSION = "143"
 MAX_IMAGE_BYTES = 25 * 1024 * 1024
 OCR_PYTHON = os.getenv("KIRANA_OCR_PYTHON", "/opt/kirana-ocr/bin/python")
 WORKER = Path(__file__).with_name("local_handwriting_worker.py")
 
 
 def _run_worker(raw: bytes) -> tuple[list[dict[str, Any]], int, int]:
-    suffix = ".jpg"
-    with tempfile.NamedTemporaryFile(prefix="kirana-bill-", suffix=suffix, delete=False) as temp:
+    with tempfile.NamedTemporaryFile(prefix="kirana-bill-", suffix=".jpg", delete=False) as temp:
         temp.write(raw)
         temp_path = temp.name
     try:
@@ -36,7 +35,7 @@ def _run_worker(raw: bytes) -> tuple[list[dict[str, Any]], int, int]:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            timeout=90,
+            timeout=110,
             env=env,
             check=False,
         )
@@ -88,6 +87,36 @@ def _run_worker(raw: bytes) -> tuple[list[dict[str, Any]], int, int]:
             pass
 
 
+def _quality(rows: list[dict[str, Any]]) -> tuple[int, float, float]:
+    if not rows:
+        return 0, 0.0, 0.0
+    matched = [
+        row
+        for row in rows
+        if row.get("item_id") and local._num(row.get("match_confidence")) >= 0.58
+    ]
+    average = sum(local._num(row.get("match_confidence")) for row in rows) / len(rows)
+    return len(matched), len(matched) / len(rows), average
+
+
+def _tesseract_safe_rows(raw: bytes, items: list[dict[str, Any]], bill_type: str) -> tuple[list[dict[str, Any]], str]:
+    text = legacy._ocr_text(raw)
+    fallback = legacy._parse_item_lines(text, items, bill_type)
+    safe_rows: list[dict[str, Any]] = []
+    for row in fallback:
+        if not row.get("item_id"):
+            continue
+        if local._num(row.get("match_confidence")) < 0.74:
+            continue
+        if not (0 < local._num(row.get("qty")) <= 100):
+            continue
+        if not (0 < local._num(row.get("amount")) <= 250_000):
+            continue
+        row["source_text"] = str(row.get("raw_line") or row.get("item_name") or "")
+        safe_rows.append(row)
+    return safe_rows, text
+
+
 def _extract(raw: bytes, business_id: int, bill_type: str) -> dict[str, Any]:
     with db() as conn:
         items = [
@@ -112,28 +141,47 @@ def _extract(raw: bytes, business_id: int, bill_type: str) -> dict[str, Any]:
         lines, width, height, items, aliases
     )
 
-    if len(rows) < 2:
-        # Local Tesseract fallback only. Never call Gemini from this path.
-        text = legacy._ocr_text(raw)
-        fallback = legacy._parse_item_lines(text, items, bill_type)
-        safe_rows = []
-        for row in fallback:
-            if local._num(row.get("match_confidence")) < 0.72:
-                continue
-            if not (0 < local._num(row.get("qty")) <= 100):
-                continue
-            if not (0 < local._num(row.get("amount")) <= 250_000):
-                continue
-            row["source_text"] = str(row.get("raw_line") or row.get("item_name") or "")
-            safe_rows.append(row)
-        if len(safe_rows) < 2:
+    matched_count, matched_ratio, average_confidence = _quality(rows)
+    weak_local = (
+        len(rows) < 2
+        or matched_count < 2
+        or matched_ratio < 0.50
+        or average_confidence < 0.54
+    )
+
+    if weak_local:
+        safe_rows, text = _tesseract_safe_rows(raw, items, bill_type)
+        if len(safe_rows) >= 2:
+            rows = safe_rows
+            calculated_total = round(sum(local._num(row.get("amount")) for row in rows), 2)
+            warnings.append("PP-OCRv5 handwriting confidence was low; safe local OCR fallback used.")
+            raw_text = raw_text + "\n\nTESSERACT FALLBACK:\n" + text
+        else:
             raise ValueError(
-                "Kirana local handwriting AI could not read this bill reliably. Try a clearer, straighter photo with the complete bill visible."
+                "Handwriting abhi reliably read nahi hui, isliye galat bill draft nahi banaya. "
+                "Photo ko seedha crop karke poora bill clear light me scan karein."
             )
-        rows = safe_rows
-        calculated_total = round(sum(local._num(row.get("amount")) for row in rows), 2)
-        warnings.append("Local Paddle confidence was low; safe Tesseract fallback used.")
-        raw_text = raw_text + "\n\nTESSERACT FALLBACK:\n" + text
+
+    matched_count, matched_ratio, average_confidence = _quality(rows)
+    unmatched_count = sum(1 for row in rows if not row.get("item_id"))
+    low_count = sum(1 for row in rows if local._num(row.get("match_confidence")) < 0.65)
+
+    total_ok = True
+    if detected_total > 0 and calculated_total > 0:
+        total_ok = abs(calculated_total - detected_total) <= max(5.0, detected_total * 0.05)
+
+    save_allowed = (
+        len(rows) >= 2
+        and unmatched_count == 0
+        and low_count == 0
+        and matched_ratio >= 0.80
+        and average_confidence >= 0.66
+        and total_ok
+    )
+    if not save_allowed:
+        warnings.append(
+            "Draft review required: har row me catalog ka correct item select karein; tabhi Save Bill karein."
+        )
 
     party_matches = legacy._party_matches(raw_text, parties, bill_type) if raw_text else []
     return {
@@ -142,12 +190,21 @@ def _extract(raw: bytes, business_id: int, bill_type: str) -> dict[str, Any]:
         "invoice_date": "",
         "items": rows,
         "party_matches": party_matches,
-        "ocr_text": "Kirana Handwriting AI v1 (self-hosted, no Gemini)\n" + raw_text,
+        "ocr_text": "Kirana Handwriting AI v2 · PP-OCRv5 Hindi/Devanagari · self-hosted\n" + raw_text,
         "detected_lines": len(rows),
         "detected_total": detected_total,
         "calculated_total": calculated_total,
         "warnings": warnings,
-        "reader": "kirana_handwriting_local_v1",
+        "save_allowed": save_allowed,
+        "quality": {
+            "matched_rows": matched_count,
+            "matched_ratio": round(matched_ratio, 3),
+            "average_confidence": round(average_confidence, 3),
+            "unmatched_rows": unmatched_count,
+            "low_confidence_rows": low_count,
+            "total_ok": total_ok,
+        },
+        "reader": "kirana_handwriting_local_v2",
         "version": VERSION,
     }
 
@@ -192,7 +249,7 @@ async def isolated_local_handwriting_reader(request: Request, call_next):
         )
     except ValueError as exc:
         return JSONResponse(
-            {"detail": str(exc), "reader": "kirana_handwriting_local_v1", "version": VERSION},
+            {"detail": str(exc), "reader": "kirana_handwriting_local_v2", "version": VERSION},
             status_code=422,
             headers={"Cache-Control": "no-store"},
         )
@@ -206,7 +263,7 @@ async def isolated_local_handwriting_reader(request: Request, call_next):
         return JSONResponse(
             {
                 "detail": f"Local handwriting AI failed safely: {exc}",
-                "reader": "kirana_handwriting_local_v1",
+                "reader": "kirana_handwriting_local_v2",
                 "version": VERSION,
             },
             status_code=503,
