@@ -11,15 +11,15 @@ import backend.gemini_model_upgrade_ext  # noqa: F401
 import backend.photo_upload_limit_25mb_ext  # noqa: F401
 # Local learning/matching rules and learned handwriting aliases.
 import backend.local_handwriting_ai_ext  # noqa: F401
-# Final primary reader: PaddleOCR runs in an isolated worker environment, so the
-# billing app stays stable and bill images never need Gemini or another API.
+# Final primary reader: PP-OCRv5 Hindi/Devanagari runs in an isolated local
+# worker, with strict catalog-match quality checks and no external AI API.
 import backend.local_handwriting_process_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
 import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "142"
+VERSION = "143"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
