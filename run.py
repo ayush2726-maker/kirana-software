@@ -98,6 +98,8 @@ import backend.owner_print_center_ext  # noqa: F401
 import backend.a5_private_print_ext  # noqa: F401
 # Adds Items, Sales, Purchases and Parties import center to owner apps.
 import backend.owner_import_center_ext  # noqa: F401
+# Reads bill photos into editable drafts and generates/prints item barcodes.
+import backend.photo_bill_barcode_ext  # noqa: F401
 # Makes OTP expiry/refresh independent of the phone timezone.
 import backend.customer_otp_refresh_fix_ext  # noqa: F401
 # Keeps the final Android/browser cache version on the latest owner build.
