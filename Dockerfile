@@ -12,8 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Kirana Handwriting AI runs in a completely isolated Python environment so
 # PaddleOCR/PaddleX cannot change or break the billing application's packages.
-# PaddlePaddle 3.3.x has a known CPU oneDNN/PIR regression; keep the proven
-# 3.2.2 + PaddleOCR 3.4.1 combination on Python 3.12.
+# Keep the proven Paddle 3.2.2 + PaddleOCR 3.4.1 combination on Python 3.12.
 RUN python -m venv /opt/kirana-ocr \
     && /opt/kirana-ocr/bin/pip install --no-cache-dir --upgrade pip \
     && /opt/kirana-ocr/bin/pip install --no-cache-dir paddlepaddle==3.2.2 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/ \
@@ -22,9 +21,8 @@ RUN python -m venv /opt/kirana-ocr \
 ENV PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
 ENV KIRANA_OCR_PYTHON=/opt/kirana-ocr/bin/python
 
-# Cache the Hindi multilingual model and run a real inference smoke-test at
-# image-build time. A model that only initializes but crashes on predict must
-# never be deployed to users.
+# Cache the PP-OCRv5 Hindi/Devanagari model and run a real inference smoke-test.
+# A model that only initializes but crashes on predict must never be deployed.
 RUN /opt/kirana-ocr/bin/python - <<'PY'
 from paddleocr import PaddleOCR
 from PIL import Image, ImageDraw
@@ -32,20 +30,21 @@ import numpy as np
 
 ocr = PaddleOCR(
     lang='hi',
-    ocr_version='PP-OCRv3',
+    ocr_version='PP-OCRv5',
     use_doc_orientation_classify=False,
     use_doc_unwarping=False,
     use_textline_orientation=False,
     device='cpu',
     enable_mkldnn=True,
     cpu_threads=2,
-    text_rec_score_thresh=0.12,
+    text_rec_score_thresh=0.18,
 )
-img = Image.new('RGB', (640, 320), 'white')
+img = Image.new('RGB', (720, 360), 'white')
 draw = ImageDraw.Draw(img)
-draw.rectangle((40, 80, 580, 120), fill='black')
+draw.text((40, 80), '100g test 80', fill='black')
+draw.text((40, 180), '1kg item 140', fill='black')
 list(ocr.predict(np.asarray(img)))
-print('Kirana handwriting local inference smoke-test passed')
+print('Kirana PP-OCRv5 Hindi local inference smoke-test passed')
 PY
 
 COPY . .
