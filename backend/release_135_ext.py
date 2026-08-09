@@ -14,14 +14,16 @@ import backend.handwritten_bill_ai_ext  # noqa: F401
 import backend.gemini_model_upgrade_ext  # noqa: F401
 # Allows high-resolution phone photos up to 25 MB.
 import backend.photo_upload_limit_25mb_ext  # noqa: F401
-# Hindi/English Quick Write billing: e.g. "काबली 1kg" -> catalog item, size and rate.
+# Hindi/English Quick Write billing.
 import backend.quick_write_bill_ext  # noqa: F401
+# Build 150: real pencil/stylus canvas, safer item/size matching, stable editor keyboard.
+import backend.quick_write_canvas_fix_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
 import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "149"
+VERSION = "150"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
