@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      KIRANA_DB_PATH: ${{ runner.temp }}/kirana-owner-ui.db
+      KIRANA_DB_PATH: /tmp/kirana-owner-ui.db
       OWNER_UI_ARTIFACT_DIR: test-artifacts
     steps:
       - name: Mark owner UI test pending
