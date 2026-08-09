@@ -26,20 +26,21 @@ import backend.quick_write_column_format_ext  # noqa: F401
 import backend.quick_write_local_ai_ext  # noqa: F401
 # Independently OCR Qty/Item/Rate columns + Hindi voice parsing.
 import backend.quick_write_voice_accuracy_ext  # noqa: F401
-# Build 168: item-first and compound weights, e.g. "mishri 1 kilo 100 gram" = 1.1 kg.
+# Build 169: one weight = quantity; two weights = Qty + pack Size.
+# Examples: "100g mishri" => qty .1kg; "mishri 1 kilo 100g" => qty 1, size 100gm.
 import backend.quick_write_voice_compound_fix_ext  # noqa: F401
 # Interactive AI Bill + customer/item inline creation APIs.
 import backend.quick_write_voice_fallback_ext  # noqa: F401
 # Final runtime binding for native voice and continuous AI Bill flow.
 import backend.quick_write_voice_runtime_fix_ext  # noqa: F401
-# Build 166: native Google recognizer prompt follows the current AI step.
+# Native Google recognizer prompt follows the current AI step.
 import backend.quick_write_voice_step_prompt_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
 import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "168"
+VERSION = "169"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
