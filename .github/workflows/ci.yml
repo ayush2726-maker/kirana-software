@@ -16,6 +16,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - name: Check JavaScript syntax
         run: |
           node --check static/app.js
@@ -29,8 +33,13 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund
           npx expo config --type public >/tmp/expo-config.json
           npx expo prebuild --no-install --platform android --clean
+      - name: Compile Android debug APK locally
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
       - name: Check Python syntax
-        run: python -m py_compile backend/app.py backend/settings_ext.py backend/items_ext.py backend/features_ext.py run.py
+        run: python -m py_compile backend/app.py backend/settings_ext.py backend/items_ext.py backend/features_ext.py backend/smart_tools_runtime_fix_ext.py backend/quick_write_voice_accuracy_ext.py backend/quick_write_voice_runtime_fix_ext.py run.py
       - name: Install test dependencies
         run: pip install -r requirements.txt pytest httpx
       - name: Run tests
