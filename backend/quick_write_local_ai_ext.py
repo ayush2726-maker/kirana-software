@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import re
+from io import BytesIO
 from typing import Any
+
+from PIL import Image, ImageOps, ImageEnhance
+import pytesseract
 
 import backend.quick_write_canvas_fix_ext as quick_canvas
 import backend.local_handwriting_ai_ext as local_ai
 
-VERSION = "157"
+VERSION = "158"
 
 
 def _num_text(text: Any) -> float:
@@ -24,52 +28,110 @@ def _num_text(text: Any) -> float:
     return float(nums[-1]) if nums else 0.0
 
 
+def _prepare(raw: bytes) -> Image.Image:
+    img = Image.open(BytesIO(raw))
+    img = ImageOps.exif_transpose(img).convert("L")
+    # Canvas is already clean white/black; mild contrast improves handwriting OCR.
+    img = ImageEnhance.Contrast(img).enhance(1.8)
+    if img.width < 900:
+        scale = 900 / max(1, img.width)
+        img = img.resize((int(img.width * scale), int(img.height * scale)))
+    return img
+
+
+def _ocr_words(raw: bytes) -> tuple[list[dict[str, Any]], int, int]:
+    img = _prepare(raw)
+    configs = [
+        ("hin+eng", "--oem 3 --psm 6"),
+        ("eng", "--oem 3 --psm 6"),
+    ]
+    last_exc = None
+    for lang, config in configs:
+        try:
+            data = pytesseract.image_to_data(img, lang=lang, config=config, output_type=pytesseract.Output.DICT)
+            words: list[dict[str, Any]] = []
+            n = len(data.get("text", []))
+            for i in range(n):
+                text = str(data["text"][i] or "").strip()
+                if not text:
+                    continue
+                try:
+                    conf = float(data.get("conf", [0] * n)[i])
+                except Exception:
+                    conf = 0.0
+                x = float(data["left"][i]); y = float(data["top"][i])
+                w = float(data["width"][i]); h = float(data["height"][i])
+                words.append({
+                    "text": text,
+                    "score": max(0.0, min(1.0, conf / 100.0)),
+                    "x1": x,
+                    "y1": y,
+                    "x2": x + w,
+                    "y2": y + h,
+                    "cx": x + w / 2.0,
+                    "cy": y + h / 2.0,
+                    "h": max(1.0, h),
+                    "line": (data.get("block_num", [0]*n)[i], data.get("par_num", [0]*n)[i], data.get("line_num", [0]*n)[i]),
+                })
+            if words:
+                return words, img.width, img.height
+        except Exception as exc:
+            last_exc = exc
+    if last_exc:
+        raise last_exc
+    return [], img.width, img.height
+
+
+def _group(words: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
+    by_line: dict[Any, list[dict[str, Any]]] = {}
+    for w in words:
+        by_line.setdefault(w.get("line"), []).append(w)
+    lines = [sorted(v, key=lambda x: x["x1"]) for v in by_line.values()]
+    return sorted(lines, key=lambda row: sum(x["cy"] for x in row) / max(1, len(row)))
+
+
 def _local_quick_extract(raw: bytes) -> list[dict[str, Any]]:
-    """Fast local Quick Write reader: LEFT qty | MIDDLE item | RIGHT rate."""
-    fragments, width, _height = local_ai._paddle_fragments(raw)
-    lines = local_ai._group_lines(fragments)
+    """Local Quick Write reader: LEFT qty | MIDDLE item | RIGHT rate."""
+    words, width, _height = _ocr_words(raw)
+    lines = _group(words)
     out: list[dict[str, Any]] = []
 
-    for line in lines:
-        parts = list(line.get("parts") or [])
+    for parts in lines:
         if not parts:
             continue
-
-        # Spatial columns are deliberate in the user's handwritten format.
-        left = [p for p in parts if float(p.get("cx") or 0) < width * 0.27]
-        right = [p for p in parts if float(p.get("cx") or 0) > width * 0.70]
-        middle = [p for p in parts if width * 0.22 <= float(p.get("cx") or 0) <= width * 0.78]
+        # Fixed spatial bill format: left qty, middle item, right rate.
+        left = [p for p in parts if p["cx"] < width * 0.23]
+        right = [p for p in parts if p["cx"] > width * 0.72]
+        middle = [p for p in parts if width * 0.18 <= p["cx"] <= width * 0.82]
 
         qty = 1.0
-        if left:
-            qtext = " ".join(str(p.get("text") or "") for p in left)
-            q = _num_text(qtext)
-            if 0 < q <= 999:
-                qty = q
+        qtext = " ".join(p["text"] for p in left)
+        q = _num_text(qtext)
+        if 0 < q <= 999:
+            qty = q
 
         rate = 0.0
-        if right:
-            rtext = " ".join(str(p.get("text") or "") for p in right)
-            r = _num_text(rtext)
-            if 0 < r <= 250000:
-                rate = r
+        rtext = " ".join(p["text"] for p in right)
+        r = _num_text(rtext)
+        if 0 < r <= 250000:
+            rate = r
 
-        # Remove numeric-only edge fragments from item text.
-        item_parts = []
+        item_parts: list[str] = []
         for p in middle:
-            text = str(p.get("text") or "").strip()
-            cx = float(p.get("cx") or 0)
-            if cx < width * 0.30 and _num_text(text) > 0 and re.fullmatch(r"[\s\d०-९./½¼¾-]+", text):
-                continue
-            if cx > width * 0.68 and _num_text(text) > 0 and re.fullmatch(r"[\s₹\d०-९.,/-]+", text):
+            text = str(p["text"] or "").strip()
+            # Ignore edge-column pure numbers from item text.
+            pure_num = bool(re.fullmatch(r"[\s₹\d०-९.,/½¼¾-]+", text))
+            if pure_num and (p["cx"] < width * 0.30 or p["cx"] > width * 0.68):
                 continue
             item_parts.append(text)
         item_text = " ".join(x for x in item_parts if x).strip()
+
+        # If OCR merged a full row, remove first qty and last rate numerically.
         if not item_text:
-            # Fallback: use line text minus obvious left/right numeric tokens.
-            item_text = str(line.get("text") or "").strip()
-            item_text = re.sub(r"^\s*(?:\d+\s*/\s*\d+|[½¼¾]|\d+(?:\.\d+)?)\s+", "", item_text)
-            item_text = re.sub(r"\s+₹?\s*\d+(?:\.\d+)?\s*$", "", item_text).strip()
+            full = " ".join(p["text"] for p in parts).strip()
+            full = re.sub(r"^\s*(?:\d+\s*/\s*\d+|[½¼¾]|\d+(?:\.\d+)?)\s+", "", full)
+            full = re.sub(r"\s+₹?\s*\d+(?:\.\d+)?\s*$", "", full).strip()
+            item_text = full
 
         size = local_ai._size_from_text(item_text)
         if size:
@@ -83,6 +145,7 @@ def _local_quick_extract(raw: bytes) -> list[dict[str, Any]]:
         score = sum(float(p.get("score") or 0) for p in parts) / max(1, len(parts))
         out.append({
             "item_name": item_text[:160],
+            "source_text": item_text[:160],
             "qty": round(qty, 3),
             "size": size,
             "rate": round(rate, 2),
@@ -90,11 +153,11 @@ def _local_quick_extract(raw: bytes) -> list[dict[str, Any]]:
         })
 
     if not out:
-        raise ValueError("Kirana AI handwriting ko reliably read nahi kar paya. Thoda bada aur seedha likhkar try karein.")
+        raise ValueError("Kirana AI handwriting ko read nahi kar paya. Thoda bada aur ek row me Qty | Item | Rate likhkar try karein.")
     return out[:40]
 
 
-# Replace Gemini with local PaddleOCR-based reader. No API quota/network needed.
+# Replace Gemini/Paddle with lightweight local OCR. No API quota, numpy or Paddle required.
 quick_canvas._gemini_canvas_extract = _local_quick_extract
 
 # Preserve handwritten right-column rate. Catalog/last-billed rate is only fallback.
@@ -115,15 +178,10 @@ def _rows_from_ai_local(ai_rows, items, bill_type, conn, bid):
 quick_canvas._rows_from_ai = _rows_from_ai_local
 quick_canvas.VERSION = VERSION
 
-# UI wording + adaptive learning: when user corrects/selects an item, remember
-# that raw handwriting alias for next time using the existing local learning API.
+# UI wording + adaptive learning: when user corrects/selects an item, remember alias.
 html = quick_canvas.HTML
 html = html.replace("Handwriting read ho rahi hai…", "Kirana AI handwriting read kar raha hai…")
 html = html.replace("Naye items read ho rahe hain…", "Kirana AI naye items read kar raha hai…")
-html = html.replace(
-    "var got=d.items||[];lines=append?lines.concat(got):got;",
-    "var got=d.items||[];lines=append?lines.concat(got):got;",
-)
 learn_needle = "if(m){x.item_id=Number(m.id);x.item_name=m.name;x.size=m.size||'';"
 learn_repl = "if(m){var rawAlias=x.source_text||x.item_name||'';x.item_id=Number(m.id);x.item_name=m.name;x.size=m.size||'';if(rawAlias){fetch('/api/photo-bill/learn',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows:[{source_text:rawAlias,item_id:Number(m.id)}]})}).catch(function(){})}"
 html = html.replace(learn_needle, learn_repl)
