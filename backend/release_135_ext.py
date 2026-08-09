@@ -28,12 +28,14 @@ import backend.quick_write_local_ai_ext  # noqa: F401
 import backend.quick_write_voice_accuracy_ext  # noqa: F401
 # Build 162: native Android voice bridge aware interactive AI Bill conversation.
 import backend.quick_write_voice_fallback_ext  # noqa: F401
+# Build 163: bind AI + native voice inside the actual Quick Write runtime scope.
+import backend.quick_write_voice_runtime_fix_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
 import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "162"
+VERSION = "163"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
