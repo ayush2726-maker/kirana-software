@@ -6,7 +6,7 @@ const expo = {
   name: "Kirana Software Mobile",
   slug: "kirana-software-mobile",
   owner: "ayush2726",
-  version: "1.0.6",
+  version: "1.0.7",
   orientation: "portrait",
   userInterfaceStyle: "light",
   backgroundColor: "#eef7fd",
@@ -21,13 +21,12 @@ const expo = {
   runtimeVersion: {
     policy: "appVersion"
   },
-  // Expo base mods run in reverse registration order. Register the voice patch
-  // first so the Kirana activity generator runs before it, then voice can patch
-  // the generated MainActivity safely.
+  // Expo base mods run in reverse registration order. Register the voice/camera
+  // patch first so the Kirana activity generator runs before it.
   plugins: ["./plugins/withNativeVoiceBridgeV5", "./plugins/withNativeKiranaActivityV4"],
   android: {
     package: ANDROID_PACKAGE,
-    versionCode: 8,
+    versionCode: 9,
     softwareKeyboardLayoutMode: "resize",
     permissions: ["INTERNET", "RECORD_AUDIO"],
     adaptiveIcon: {
@@ -37,7 +36,7 @@ const expo = {
   },
   ios: {
     bundleIdentifier: ANDROID_PACKAGE,
-    buildNumber: "8",
+    buildNumber: "9",
     supportsTablet: true
   },
   extra: {
