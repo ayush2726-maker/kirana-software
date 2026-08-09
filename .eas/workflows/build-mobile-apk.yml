@@ -4,18 +4,7 @@ on:
   push:
     branches: ['main']
     paths:
-      - 'package.json'
-      - 'app.config.js'
-      - 'eas.json'
-      - 'babel.config.js'
-      - 'index.js'
-      - 'mobile/package.json'
-      - 'mobile/app.config.js'
-      - 'mobile/eas.json'
-      - 'scripts/generate-mobile-assets.js'
-      - 'plugins/withNativeKiranaActivityV2.js'
-      - 'plugins/withNativeKiranaActivityV3.js'
-      - '.eas/workflows/build-mobile-apk.yml'
+      - '.eas/TRIGGER_APK_BUILD'
 
 concurrency:
   cancel_in_progress: true
@@ -32,4 +21,4 @@ jobs:
     params:
       platform: android
       profile: preview
-      message: Kirana Software Mobile 1.0.4 Bulk Items and Back Navigation APK
+      message: Kirana Software Mobile 1.0.6 AI Bill + Native Voice APK
