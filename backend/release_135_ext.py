@@ -22,15 +22,16 @@ import backend.quick_write_delete_ext  # noqa: F401
 import backend.quick_write_grams_eraser_ext  # noqa: F401
 # LEFT qty, MIDDLE item, RIGHT rate layout.
 import backend.quick_write_column_format_ext  # noqa: F401
-# Build 158: Railway-safe local Kirana AI uses Pillow+pytesseract only, no
-# Gemini quota, numpy, PaddleOCR or PaddlePaddle build dependency.
+# Railway-safe local OCR reader.
 import backend.quick_write_local_ai_ext  # noqa: F401
+# Build 159: independently OCR Qty/Item/Rate columns + continuous Hindi voice billing.
+import backend.quick_write_voice_accuracy_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
 import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "158"
+VERSION = "159"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
