@@ -21,6 +21,14 @@ jobs:
           node --check static/app.js
           node --check static/settings-v2.js
           node --check static/features-v1.js
+          node --check plugins/withNativeKiranaActivityV4.js
+          node --check plugins/withNativeVoiceBridgeV5.js
+          node --check mobile/app.config.js
+      - name: Validate Expo Android prebuild
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npx expo config --type public >/tmp/expo-config.json
+          npx expo prebuild --no-install --platform android --clean
       - name: Check Python syntax
         run: python -m py_compile backend/app.py backend/settings_ext.py backend/items_ext.py backend/features_ext.py run.py
       - name: Install test dependencies
