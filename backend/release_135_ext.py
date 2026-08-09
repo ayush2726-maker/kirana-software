@@ -24,17 +24,16 @@ import backend.quick_write_grams_eraser_ext  # noqa: F401
 import backend.quick_write_column_format_ext  # noqa: F401
 # Railway-safe local OCR reader.
 import backend.quick_write_local_ai_ext  # noqa: F401
-# Independently OCR Qty/Item/Rate columns + continuous Hindi voice billing.
+# Independently OCR Qty/Item/Rate columns + Hindi voice parsing.
 import backend.quick_write_voice_accuracy_ext  # noqa: F401
-# Build 161: robust Android voice fallback using Gboard/keyboard dictation when
-# Chrome Custom Tab blocks or loses direct Web Speech microphone access.
+# Build 162: native Android voice bridge aware interactive AI Bill conversation.
 import backend.quick_write_voice_fallback_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
 import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "161"
+VERSION = "162"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
