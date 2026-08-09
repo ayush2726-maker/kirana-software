@@ -21,7 +21,7 @@ const expo = {
   runtimeVersion: {
     policy: "appVersion"
   },
-  plugins: ["../plugins/withNativeKiranaActivityV4", "../plugins/withNativeVoiceBridgeV5"],
+  plugins: ["./plugins/withNativeKiranaActivityV4", "./plugins/withNativeVoiceBridgeV5"],
   android: {
     package: ANDROID_PACKAGE,
     versionCode: 8,
