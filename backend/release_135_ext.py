@@ -22,14 +22,14 @@ import backend.quick_write_canvas_fix_ext  # noqa: F401
 import backend.quick_write_delete_ext  # noqa: F401
 # 100/200/500 pack handling + particular-stroke eraser.
 import backend.quick_write_grams_eraser_ext  # noqa: F401
-# Build 155: user's handwritten spatial format = LEFT qty, MIDDLE item, RIGHT rate.
+# Build 156: LEFT qty, MIDDLE item, RIGHT rate layout; fixes startup crash.
 import backend.quick_write_column_format_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
 import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "155"
+VERSION = "156"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
