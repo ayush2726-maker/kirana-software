@@ -33,6 +33,9 @@ import backend.quick_write_voice_compound_fix_ext  # noqa: F401
 import backend.quick_write_voice_fallback_ext  # noqa: F401
 # Final runtime binding for native voice and continuous AI Bill flow.
 import backend.quick_write_voice_runtime_fix_ext  # noqa: F401
+# Build 170: phone-aware customer creation and duplicate-name chooser.
+import backend.quick_write_customer_smart_ext  # noqa: F401
+import backend.quick_write_customer_ui_ext  # noqa: F401
 # Native Google recognizer prompt follows the current AI step.
 import backend.quick_write_voice_step_prompt_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
@@ -40,7 +43,7 @@ import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "169"
+VERSION = "170"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
