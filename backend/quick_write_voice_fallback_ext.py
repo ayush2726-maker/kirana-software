@@ -177,7 +177,7 @@ voice_js = r'''
   vt.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();clearTimeout(timer);if(aiOn)window.KiranaVoiceResult(vt.value);else sendVoiceText(vt.value)}});
 })();
 '''
-html = html.replace('</script>', voice_js + '</script>', 1)
+html = html.replace('})();\n</script>', voice_js + '\n})();\n</script>', 1)
 html = html.replace(
     'Likho: LEFT me Qty, MIDDLE me Item, RIGHT me Rate.',
     'Likho: LEFT me Qty, MIDDLE me Item, RIGHT me Rate. Ya 🤖 AI Bill se poora bill baat karke banao.',
