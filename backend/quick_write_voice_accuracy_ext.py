@@ -9,12 +9,12 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from PIL import Image, ImageOps, ImageEnhance, ImageFilter
 import pytesseract
 
-from backend.app import app, db
+from backend.app import app, db, normalize_size_label
 from backend.owner_session_ext import COOKIE_NAME, _session_row
 import backend.quick_write_canvas_fix_ext as quick_canvas
 import backend.quick_write_local_ai_ext as local_reader
 
-VERSION = "159"
+VERSION = "163"
 
 NUM_WORDS = {
     "आधा":0.5,"aadha":0.5,"half":0.5,"डेढ़":1.5,"dedh":1.5,
@@ -26,6 +26,15 @@ NUM_WORDS = {
     "साठ":60,"saath":60,"सत्तर":70,"sattar":70,"अस्सी":80,"assi":80,"नब्बे":90,"nabbe":90,
     "सौ":100,"sau":100,"hundred":100,
 }
+
+UNIT_ALIASES = {
+    "g":"gm","gm":"gm","gms":"gm","gram":"gm","grams":"gm","ग्राम":"gm",
+    "kg":"kg","kgs":"kg","kilo":"kg","kilogram":"kg","kilograms":"kg","किलो":"kg","किलोग्राम":"kg",
+    "ml":"ml","एमएल":"ml",
+    "l":"ltr","lt":"ltr","ltr":"ltr","liter":"ltr","litre":"ltr","लीटर":"ltr",
+    "pc":"pcs","pcs":"pcs","piece":"pcs","pieces":"pcs","पीस":"pcs",
+}
+UNIT_PATTERN = "|".join(sorted((re.escape(k) for k in UNIT_ALIASES), key=len, reverse=True))
 
 
 def _ntext(text: Any) -> float:
@@ -75,8 +84,6 @@ def _nearest(rows,y,tol):
 
 def _better_extract(raw: bytes) -> list[dict[str,Any]]:
     img=_prep(raw)
-    # Read the three handwritten columns independently. This stops rate digits
-    # from leaking into item names and qty from being treated as size.
     left=_crop_lines(img,0.00,0.24,"eng",True)
     try: middle=_crop_lines(img,0.18,0.74,"hin+eng",False)
     except Exception: middle=_crop_lines(img,0.18,0.74,"eng",False)
@@ -111,22 +118,36 @@ def _voice_rows(text: str, items, bill_type: str, conn, bid: int):
     chunks=[c.strip() for c in re.split(r"(?:\s+फिर\s+|\s+next\s+|\s+अगला\s+|[,;\n]+)",text,flags=re.I) if c.strip()]
     out=[]
     for chunk in chunks:
-        toks=chunk.split(); qty=1.0; rate=0.0
-        if toks:
-            q=_spoken_number(toks[0])
-            if q>0: qty=q; toks=toks[1:]
+        raw=chunk.strip(); qty=1.0; rate=0.0; size=""
+        # Spoken pack size: "100 gram jeera", "5kg moong", "2 kilo desi".
+        # A number followed by a unit is SIZE, not bill quantity.
+        sm=re.match(rf"^\s*(\d+(?:\.\d+)?|½|¼|¾)\s*({UNIT_PATTERN})\b\s*(.*)$", raw, flags=re.I)
+        if sm:
+            num=_ntext(sm.group(1)); unit=UNIT_ALIASES.get(sm.group(2).lower(),sm.group(2).lower())
+            size=normalize_size_label(str(num),unit) if num>0 else ""
+            work=sm.group(3).strip()
+        else:
+            work=raw
+            toks0=work.split()
+            if toks0:
+                q=_spoken_number(toks0[0])
+                if q>0:
+                    qty=q; work=" ".join(toks0[1:]).strip()
+
+        toks=work.split()
         if toks:
             rr=_spoken_number(toks[-1])
-            if rr>0: rate=rr; toks=toks[:-1]
+            if rr>0:
+                rate=rr; toks=toks[:-1]
         name=" ".join(toks).strip()
         name=re.sub(r"\b(?:rate|रेट|रुपये|रुपया|rs)\b"," ",name,flags=re.I).strip()
         if not name: continue
-        item,score=quick_canvas._best(name,"",items)
+        item,score=quick_canvas._best(name,size,items)
         if item:
             final_rate=rate if rate>0 else quick_canvas._effective_rate(conn,bid,item,bill_type)
-            out.append({"source_text":chunk,"item_id":int(item["id"]),"item_name":str(item.get("name") or name),"size":str(item.get("size") or ""),"qty":round(qty,3),"rate":round(final_rate,2),"gst_rate":round(quick_canvas.quick._number(item.get("gst_rate")),2),"match_confidence":round(score,3)})
+            out.append({"source_text":chunk,"item_id":int(item["id"]),"item_name":str(item.get("name") or name),"size":str(item.get("size") or size),"qty":round(qty,3),"rate":round(final_rate,2),"gst_rate":round(quick_canvas.quick._number(item.get("gst_rate")),2),"match_confidence":round(score,3),"needs_create":False})
         else:
-            out.append({"source_text":chunk,"item_id":None,"item_name":name,"size":"","qty":round(qty,3),"rate":round(rate,2),"gst_rate":0,"match_confidence":0})
+            out.append({"source_text":chunk,"item_id":None,"item_name":name,"size":size,"qty":round(qty,3),"rate":round(rate,2),"gst_rate":0,"match_confidence":0,"needs_create":True})
     return out
 
 
@@ -146,7 +167,6 @@ async def quick_bill_voice_parse(request: Request):
         return JSONResponse({"detail":f"Voice parse failed: {exc}"},status_code=400)
 
 
-# Add continuous voice billing to the same Quick Write page.
 html=quick_canvas.HTML
 html=html.replace('<button class="btn secondary" id="eraser">🧽 Eraser</button>','<button class="btn secondary" id="eraser">🧽 Eraser</button><button class="btn secondary" id="voice">🎤 Voice Bill</button>')
 voice_js=r'''
