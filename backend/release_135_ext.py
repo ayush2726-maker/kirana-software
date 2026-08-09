@@ -26,16 +26,16 @@ import backend.quick_write_column_format_ext  # noqa: F401
 import backend.quick_write_local_ai_ext  # noqa: F401
 # Independently OCR Qty/Item/Rate columns + Hindi voice parsing.
 import backend.quick_write_voice_accuracy_ext  # noqa: F401
-# Build 162: native Android voice bridge aware interactive AI Bill conversation.
+# Interactive AI Bill + customer/item inline creation APIs.
 import backend.quick_write_voice_fallback_ext  # noqa: F401
-# Build 163: bind AI + native voice inside the actual Quick Write runtime scope.
+# Final runtime binding for native voice and continuous AI Bill flow.
 import backend.quick_write_voice_runtime_fix_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
 import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "163"
+VERSION = "164"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
