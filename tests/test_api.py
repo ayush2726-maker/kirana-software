@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -151,6 +152,7 @@ def test_login_and_dashboard(tmp_path):
 def test_accounts_entries_documents_and_activity(tmp_path):
     client = build_client(tmp_path)
     headers = setup_and_headers(client)
+    entry_date = date.today().isoformat()
 
     accounts = client.get('/api/accounts', headers=headers)
     assert accounts.status_code == 200
@@ -164,19 +166,19 @@ def test_accounts_entries_documents_and_activity(tmp_path):
     bank_id = bank.json()['id']
 
     expense = client.post('/api/entries', headers=headers, json={
-        'entry_type': 'expense', 'entry_date': '2026-07-23', 'title': 'Electricity',
+        'entry_type': 'expense', 'entry_date': entry_date, 'title': 'Electricity',
         'account_id': bank_id, 'amount': 750, 'mode': 'bank'
     })
     assert expense.status_code == 200, expense.text
 
     transfer = client.post('/api/entries', headers=headers, json={
-        'entry_type': 'transfer', 'entry_date': '2026-07-23', 'title': 'Cash withdrawal',
+        'entry_type': 'transfer', 'entry_date': entry_date, 'title': 'Cash withdrawal',
         'account_id': bank_id, 'to_account_id': cash['id'], 'amount': 1000, 'mode': 'bank'
     })
     assert transfer.status_code == 200, transfer.text
 
     quotation = client.post('/api/documents', headers=headers, json={
-        'kind': 'estimate', 'doc_date': '2026-07-23', 'amount': 3500,
+        'kind': 'estimate', 'doc_date': entry_date, 'amount': 3500,
         'status': 'open', 'note': 'Test quotation'
     })
     assert quotation.status_code == 200, quotation.text
