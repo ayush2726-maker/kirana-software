@@ -6,7 +6,7 @@ from typing import Any
 import backend.quick_write_canvas_fix_ext as quick_canvas
 import backend.quick_write_voice_accuracy_ext as voice
 
-VERSION = "168"
+VERSION = "169"
 
 _NUMBER = r"(?:\d+(?:\.\d+)?|½|¼|¾)"
 _UNIT = voice.UNIT_PATTERN
@@ -18,33 +18,44 @@ def _unit(unit: str) -> str:
     return voice.UNIT_ALIASES.get(str(unit or "").strip().lower(), str(unit or "").strip().lower())
 
 
-def _compound_qty(matches: list[re.Match[str]]) -> tuple[float | None, str]:
+def _single_weight_qty(m: re.Match[str]) -> tuple[float, str]:
+    """One spoken weight means actual quantity.
+
+    Examples: 100g mishri -> 0.1 kg qty; 1kg mishri -> 1 kg qty.
+    """
+    n = voice._ntext(m.group("num"))
+    u = _unit(m.group("unit"))
+    if u == "gm":
+        return round(n / 1000.0, 3), "kg"
+    if u == "ml":
+        return round(n / 1000.0, 3), "ltr"
+    return round(n, 3), u
+
+
+def _qty_and_size(matches: list[re.Match[str]]) -> tuple[float | None, str, str]:
+    """Kirana speech semantics.
+
+    One weight => quantity.
+      100g mishri -> qty .1 kg, no pack size.
+
+    Two weights => first is quantity/count, second is pack size.
+      mishri 1 kilo 100g -> qty 1, size 100 gm.
+      mishri 2 kilo 500g -> qty 2, size 500 gm.
+
+    This intentionally does NOT add 1kg + 100g into 1.1kg.
+    """
     if not matches:
-        return None, ""
-    units = [_unit(m.group("unit")) for m in matches]
-    if all(u in {"kg", "gm"} for u in units):
-        kg = 0.0
-        for m, u in zip(matches, units):
-            n = voice._ntext(m.group("num"))
-            kg += n if u == "kg" else n / 1000.0
-        return round(kg, 3), "kg"
-    if all(u in {"ltr", "ml"} for u in units):
-        litres = 0.0
-        for m, u in zip(matches, units):
-            n = voice._ntext(m.group("num"))
-            litres += n if u == "ltr" else n / 1000.0
-        return round(litres, 3), "ltr"
+        return None, "", ""
     if len(matches) == 1:
-        m = matches[0]
-        n = voice._ntext(m.group("num"))
-        u = units[0]
-        if u == "gm":
-            return round(n / 1000.0, 3), "kg"
-        if u == "ml":
-            return round(n / 1000.0, 3), "ltr"
-        if u in {"kg", "ltr", "pcs"}:
-            return round(n, 3), u
-    return None, ""
+        qty, base_unit = _single_weight_qty(matches[0])
+        return qty, "", base_unit
+
+    first, second = matches[0], matches[1]
+    qty = voice._ntext(first.group("num"))
+    size_num = voice._ntext(second.group("num"))
+    size_unit = _unit(second.group("unit"))
+    size = voice.normalize_size_label(str(size_num), size_unit)
+    return round(qty, 3), size, _unit(first.group("unit"))
 
 
 def _clean_name(raw: str, matches: list[re.Match[str]]) -> str:
@@ -57,19 +68,6 @@ def _clean_name(raw: str, matches: list[re.Match[str]]) -> str:
     text = re.sub(r"\b(?:rate|रेट|भाव|price|रुपये|रुपया|rs\.?)\b", " ", text, flags=re.I)
     text = re.sub(r"\s+", " ", text).strip(" -,:;|")
     return text
-
-
-def _rate_from_text(raw: str, work_without_weight: str) -> float:
-    explicit = _EXPLICIT_RATE_RE.search(raw)
-    if explicit:
-        return voice._ntext(explicit.group(1))
-    # Keep the old shorthand only when no weight/unit is present: "2 moong 100".
-    toks = work_without_weight.split()
-    if toks:
-        last = voice._spoken_number(toks[-1])
-        if last > 0:
-            return last
-    return 0.0
 
 
 def _voice_rows(text: Any, items: list[dict[str, Any]], bill_type: str, conn: Any, bid: int):
@@ -85,19 +83,16 @@ def _voice_rows(text: Any, items: list[dict[str, Any]], bill_type: str, conn: An
             continue
 
         weight_matches = list(_WEIGHT_RE.finditer(raw))
-        qty, base_unit = _compound_qty(weight_matches)
+        qty, spoken_size, base_unit = _qty_and_size(weight_matches)
         name = _clean_name(raw, weight_matches)
         rate = 0.0
 
         if weight_matches:
-            # Any plain number left after removing weights is not automatically a rate.
-            # Rate is accepted only when the user explicitly says rate/price/rupees.
             explicit = _EXPLICIT_RATE_RE.search(raw)
             if explicit:
                 rate = voice._ntext(explicit.group(1))
         else:
-            work = raw
-            toks = work.split()
+            toks = raw.split()
             if toks:
                 first = voice._spoken_number(toks[0])
                 if first > 0:
@@ -115,14 +110,16 @@ def _voice_rows(text: Any, items: list[dict[str, Any]], bill_type: str, conn: An
         if qty is None or qty <= 0 or qty > 999:
             qty = 1.0
 
-        item, score = quick_canvas._best(name, "", items)
+        # Spoken pack size must participate in catalog matching so the correct
+        # variant/rate is selected (e.g. Mishri 100 gm vs Mishri 500 gm).
+        item, score = quick_canvas._best(name, spoken_size, items)
         if item:
             final_rate = rate if rate > 0 else quick_canvas._effective_rate(conn, bid, item, bill_type)
             out.append({
                 "source_text": chunk,
                 "item_id": int(item["id"]),
                 "item_name": str(item.get("name") or name),
-                "size": str(item.get("size") or ""),
+                "size": str(item.get("size") or spoken_size or ""),
                 "qty": round(float(qty), 3),
                 "rate": round(final_rate, 2),
                 "gst_rate": round(quick_canvas.quick._number(item.get("gst_rate")), 2),
@@ -135,7 +132,7 @@ def _voice_rows(text: Any, items: list[dict[str, Any]], bill_type: str, conn: An
                 "source_text": chunk,
                 "item_id": None,
                 "item_name": name,
-                "size": "",
+                "size": spoken_size,
                 "qty": round(float(qty), 3),
                 "rate": round(rate, 2),
                 "gst_rate": 0,
@@ -146,7 +143,6 @@ def _voice_rows(text: Any, items: list[dict[str, Any]], bill_type: str, conn: An
     return out
 
 
-# Existing /api/quick-bill/voice-parse route resolves this global at request time,
-# so replacing the parser here upgrades the deployed web/Android app without a native APK rebuild.
+# Existing endpoint resolves this global at request time, so this stays OTA/server-side.
 voice._voice_rows = _voice_rows
 voice.VERSION = VERSION
