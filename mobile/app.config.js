@@ -21,11 +21,13 @@ const expo = {
   runtimeVersion: {
     policy: "appVersion"
   },
-  plugins: ["./plugins/withNativeKiranaActivityV4", "./plugins/withNativeVoiceBridgeV5"],
+  // Expo base mods run in reverse registration order. Register the voice patch
+  // first so the Kirana activity generator runs before it, then voice can patch
+  // the generated MainActivity safely.
+  plugins: ["./plugins/withNativeVoiceBridgeV5", "./plugins/withNativeKiranaActivityV4"],
   android: {
     package: ANDROID_PACKAGE,
     versionCode: 8,
-    edgeToEdgeEnabled: false,
     softwareKeyboardLayoutMode: "resize",
     permissions: ["INTERNET", "RECORD_AUDIO"],
     adaptiveIcon: {
