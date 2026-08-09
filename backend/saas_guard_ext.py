@@ -79,16 +79,24 @@ async def enforce_saas_subscription(request: Request, call_next):
             (token, now_iso()),
         ).fetchone()
         if not row:
-            row = conn.execute(
+            customer_schema_ready = conn.execute(
                 """
-                SELECT sb.business_id,sb.subscription_status,sb.trial_ends_at,sb.paid_until
-                FROM customer_sessions cs
-                JOIN customer_accounts ca ON ca.id=cs.customer_account_id
-                JOIN saas_businesses sb ON sb.business_id=ca.business_id
-                WHERE cs.token=? AND cs.expires_at>?
-                """,
-                (token, now_iso()),
-            ).fetchone()
+                SELECT COUNT(*)
+                FROM sqlite_master
+                WHERE type='table' AND name IN ('customer_sessions','customer_accounts')
+                """
+            ).fetchone()[0] == 2
+            if customer_schema_ready:
+                row = conn.execute(
+                    """
+                    SELECT sb.business_id,sb.subscription_status,sb.trial_ends_at,sb.paid_until
+                    FROM customer_sessions cs
+                    JOIN customer_accounts ca ON ca.id=cs.customer_account_id
+                    JOIN saas_businesses sb ON sb.business_id=ca.business_id
+                    WHERE cs.token=? AND cs.expires_at>?
+                    """,
+                    (token, now_iso()),
+                ).fetchone()
         if row:
             status = effective_status(row)
             if status == "expired" and row["subscription_status"] != "expired":
