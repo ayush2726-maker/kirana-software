@@ -16,17 +16,19 @@ import backend.gemini_model_upgrade_ext  # noqa: F401
 import backend.photo_upload_limit_25mb_ext  # noqa: F401
 # Hindi/English Quick Write billing.
 import backend.quick_write_bill_ext  # noqa: F401
-# Build 152: larger pencil canvas, append-more flow, correct bare-number quantity parsing,
-# dedicated Gemini Quick Write prompt, and saved/last-billed rate fallback.
+# Core pencil canvas + quantity parsing + Gemini Quick Write reader.
 import backend.quick_write_canvas_fix_ext  # noqa: F401
-# Build 153: delete any wrong draft row and recalculate total instantly.
+# Delete wrong draft rows.
 import backend.quick_write_delete_ext  # noqa: F401
+# Build 154: 100/200/500 bare pack numbers become grams and canvas gets a
+# particular-stroke eraser without clearing the whole page.
+import backend.quick_write_grams_eraser_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
 import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "153"
+VERSION = "154"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
