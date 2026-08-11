@@ -127,6 +127,7 @@ voice_js = r'''
 (function(){
   var vb=q('voice'), vt=q('voiceText'), aiBtn=q('aiBill'), aiPanel=q('aiPanel'), aiPrompt=q('aiPrompt'), aiHeard=q('aiHeard'), aiAdd=q('aiAddItem');
   var timer=null, aiOn=false, aiStep='idle', pendingCustomer='', pendingItem=null, partyCache=[];
+  var browserRec=null,browserVoiceStarting=false;
   if(!vb||!vt)return;
 
   function say(t){
@@ -174,12 +175,48 @@ voice_js = r'''
     }catch(e){show(e.message||String(e),true)}
   }
 
+  function manualVoice(message){
+    var box=document.getElementById('aiManualVoice2');
+    if(!box&&aiPanel){
+      box=document.createElement('div');box.id='aiManualVoice2';box.className='ks-ai-manual-voice';
+      box.innerHTML='<label>Type or use keyboard mic</label><div><input id="aiManualVoiceInput2" autocomplete="off" placeholder="Customer ya item bolkar/type karke Enter karein"><button type="button" id="aiManualVoiceSend2">Add</button></div>';
+      var controls=q('aiListen')&&q('aiListen').parentNode;aiPanel.insertBefore(box,controls||null);
+      var input=q('aiManualVoiceInput2'),send=q('aiManualVoiceSend2');
+      var submit=function(){var text=String(input&&input.value||'').trim();if(!text)return;if(input)input.value='';window.KiranaVoiceResult(text)};
+      if(send)send.onclick=submit;if(input)input.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();submit()}};
+    }
+    if(box)box.style.display='block';
+    var field=q('aiManualVoiceInput2');if(field)field.focus();else try{vt.focus()}catch(_){}
+    show(message||'Mic available nahi hai. Keyboard mic ya typing use karein.',true);return false;
+  }
+  function beginBrowserVoice(Recognition){
+    try{
+      if(!browserRec){
+        browserRec=new Recognition();browserRec.lang='hi-IN';browserRec.continuous=false;browserRec.interimResults=false;browserRec.maxAlternatives=3;
+        browserRec.onresult=function(event){var text='';for(var i=event.resultIndex||0;i<event.results.length;i++){if(event.results[i].isFinal!==false&&event.results[i][0])text=String(event.results[i][0].transcript||'').trim()}if(text)window.KiranaVoiceResult(text)};
+        browserRec.onerror=function(event){browserVoiceStarting=false;var code=String(event&&event.error||'unknown');if(code==='aborted'||code==='no-speech'){show('Awaaz nahi mili. Bolo button dobara dabayein.',true);return}if(code==='not-allowed'||code==='service-not-allowed'){manualVoice('Mic permission blocked hai. Chrome site settings me Microphone Allow karein, ya keyboard mic use karein.');return}manualVoice('Chrome voice start nahi hua ('+code+'). Keyboard mic ya typing use karein.')};
+        browserRec.onend=function(){browserVoiceStarting=false};
+      }
+      browserRec.start();show('Mic ready: boliye…');return true;
+    }catch(error){browserVoiceStarting=false;if(error&&error.name==='InvalidStateError')return true;return manualVoice('Chrome mic start nahi hua. Keyboard mic ya typing use karein.')}
+  }
+  function browserListen(){
+    var Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition)return false;if(browserVoiceStarting)return true;browserVoiceStarting=true;
+    var begin=function(){return beginBrowserVoice(Recognition)};
+    try{
+      if(navigator.mediaDevices&&typeof navigator.mediaDevices.getUserMedia==='function'){
+        show('Microphone permission check ho rahi hai…');
+        navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){try{stream.getTracks().forEach(function(track){track.stop()})}catch(_){}begin()}).catch(function(error){browserVoiceStarting=false;var denied=error&&(error.name==='NotAllowedError'||error.name==='PermissionDeniedError');manualVoice(denied?'Mic permission blocked hai. Chrome site settings me Microphone Allow karein, ya keyboard mic use karein.':'Phone mic start nahi hua. Keyboard mic ya typing use karein.')});return true;
+      }
+    }catch(_){}
+    return begin();
+  }
   function nativeListen(){
     if(window.KiranaVoice&&typeof window.KiranaVoice.start==='function'){
       try{window.KiranaVoice.start();return true}catch(_){}
     }
-    try{vt.focus();vt.click();show('Native mic available nahi hai. Neeche field me type/keyboard mic use karo.')}catch(_){}
-    return false;
+    if(browserListen())return true;
+    return manualVoice('Is app/browser me direct mic available nahi hai. Keyboard mic ya typing use karein.');
   }
   window.KiranaVoiceError=function(code){show('Voice permission/start issue: '+code,true)};
   window.KiranaVoiceResult=async function(text){

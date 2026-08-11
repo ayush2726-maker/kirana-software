@@ -10,7 +10,7 @@ unchanged while both tabs share one predictable mobile-first design.
 import backend.quick_write_canvas_fix_ext as quick_canvas
 
 
-VERSION = "174"
+VERSION = "175"
 html = quick_canvas.HTML
 
 # An older compatibility layer appends another IIFE immediately after the
@@ -107,6 +107,11 @@ body.ks-quick-174.ks-ai-mode #aiPanel{margin:12px 0 0!important;padding:0!import
 #ksAiProgress span.done:after{background:var(--ks-blue)}
 body.ks-quick-174.ks-ai-mode #aiPrompt{margin:10px 13px 0!important;padding:13px!important;border:1px solid #d9e6ff;border-radius:12px!important;background:#eff5ff!important;color:#163b72!important;font-size:15px!important;line-height:1.4!important}
 body.ks-quick-174.ks-ai-mode #aiHeard{margin:8px 13px 0!important;min-height:40px;padding:10px!important;border:1px dashed #d0d8e6!important;border-radius:10px!important;background:#fafbfc!important;color:#667085!important;font-size:10px!important}
+.ks-ai-manual-voice{margin:9px 13px 0;padding:10px;border:1px solid #f2c94c;border-radius:11px;background:#fffbeb}
+.ks-ai-manual-voice label{display:block;margin:0 0 6px;color:#7a4d00;font-size:10px;font-weight:850}
+.ks-ai-manual-voice>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}
+.ks-ai-manual-voice input{min-width:0;min-height:42px!important;border-color:#e7c56c!important;background:#fff!important;font-size:11px!important}
+.ks-ai-manual-voice button{min-width:58px;border:0;border-radius:10px;background:var(--ks-blue);color:#fff;font-size:11px;font-weight:850}
 body.ks-quick-174.ks-ai-mode #aiPanel>div:last-child{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important;margin:0!important;padding:12px 13px 14px!important}
 body.ks-quick-174.ks-ai-mode #aiListen{grid-column:1/-1;min-height:54px!important;background:var(--ks-blue);font-size:15px!important}
 body.ks-quick-174.ks-ai-mode #aiAddItem{grid-column:1/-1}
