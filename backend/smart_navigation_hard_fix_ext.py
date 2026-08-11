@@ -7,7 +7,10 @@ import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "173"
+VERSION = "174"
+native_owner.BUILD = VERSION
+final_owner.BUILD = VERSION
+stable_owner.VERSION = VERSION
 
 SMART_PATCH = r'''
 <style id="kirana-smart-hard-style">
@@ -25,13 +28,13 @@ SMART_PATCH = r'''
 <script id="kirana-smart-hard-nav">
 (function(){
   'use strict';
-  if(window.__kiranaSmartHard173)return;
-  window.__kiranaSmartHard173=true;
+  if(window.__kiranaSmartHard174)return;
+  window.__kiranaSmartHard174=true;
 
   var routes={
-    quick:'/owner/quick-bill?direct=173',
-    photo:'/owner/smart-tools?direct=173#photo',
-    barcode:'/owner/smart-tools?direct=173#barcode'
+    quick:'/owner/quick-bill?direct=174',
+    photo:'/owner/smart-tools?direct=174#photo',
+    barcode:'/owner/smart-tools?direct=174#barcode'
   };
 
   function go(kind){
@@ -125,23 +128,23 @@ def _inject(page: str) -> str:
 
 _prev_native_html = native_owner.native_owner_html
 
-def native_owner_html_173() -> str:
+def native_owner_html_174() -> str:
     return _inject(_prev_native_html())
 
-native_owner.native_owner_html = native_owner_html_173
+native_owner.native_owner_html = native_owner_html_174
 
 
 _prev_final_html = final_owner.final_owner_html
 
-def final_owner_html_173() -> str:
+def final_owner_html_174() -> str:
     return _inject(_prev_final_html())
 
-final_owner.final_owner_html = final_owner_html_173
+final_owner.final_owner_html = final_owner_html_174
 
 
 _prev_stable_page = stable_owner.stable_owner_page
 
-def stable_owner_page_173(token: str) -> HTMLResponse:
+def stable_owner_page_174(token: str) -> HTMLResponse:
     original = _prev_stable_page(token)
     page = _inject(original.body.decode("utf-8"))
     headers = {k: v for k, v in original.headers.items() if k.lower() not in {"content-length", "content-type", "set-cookie"}}
@@ -152,4 +155,4 @@ def stable_owner_page_173(token: str) -> HTMLResponse:
     response.headers["X-Kirana-Smart-Hard-Fix"] = VERSION
     return response
 
-stable_owner.stable_owner_page = stable_owner_page_173
+stable_owner.stable_owner_page = stable_owner_page_174

@@ -162,6 +162,10 @@ def main() -> None:
 
         page.locator('.topbar [data-page="reports"]').click()
         page.wait_for_selector("#page-reports.active", timeout=8_000)
+        page.wait_for_selector("#report-directory-view:not(.hidden)", timeout=8_000)
+        assert page.locator(".report-category-card").count() >= 9
+        assert page.locator('[data-report-key="sale_report"]').first.is_visible()
+        page.locator('[data-report-view="overview"]').click()
         page.wait_for_selector("#report-content:not(.hidden)", timeout=12_000)
         assert page.locator("#report-net-sales").is_visible()
         assert page.locator("#report-net-purchases").is_visible()

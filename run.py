@@ -104,6 +104,8 @@ import backend.photo_bill_barcode_ext  # noqa: F401
 import backend.customer_otp_refresh_fix_ext  # noqa: F401
 # Keeps the final Android/browser cache version on the latest owner build.
 import backend.release_135_ext  # noqa: F401
+# Detailed business, GST, party, stock, expense and order report tables.
+import backend.advanced_reports_ext  # noqa: F401
 # Final hard fix: Smart Billing actions survive every owner/native menu re-render
 # and navigate on pointer-down before legacy menu handlers can steal the click.
 import backend.smart_navigation_hard_fix_ext  # noqa: F401

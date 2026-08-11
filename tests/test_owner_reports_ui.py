@@ -17,10 +17,15 @@ def test_reports_is_present_in_owner_navigation() -> None:
 
 
 def test_reports_runtime_loads_summary_and_renders_all_sections() -> None:
-    assert "if (pageName === 'reports') loadReports();" in JS
+    assert "if (pageName === 'reports')" in JS
+    assert "renderReportCatalog();" in JS
     assert "'/api/reports/summary?date_from='" in JS
+    assert "'/api/reports/detail?report='" in JS
     assert "function setReportPreset(" in JS
     assert "function renderReports(" in JS
+    assert "function renderReportCatalog(" in JS
+    assert "function openDetailedReport(" in JS
+    assert "function downloadDetailedReport(" in JS
     assert "function downloadProtected(" in JS
     for identifier in (
         "#report-net-sales",
@@ -30,6 +35,26 @@ def test_reports_runtime_loads_summary_and_renders_all_sections() -> None:
         "#report-top-items",
     ):
         assert identifier in JS
+
+
+def test_reports_directory_has_requested_business_report_groups() -> None:
+    assert 'id="report-directory-view"' in HTML
+    assert 'id="report-detail-overlay"' in HTML
+    assert 'id="report-search"' in HTML
+    for label in (
+        "Transaction Reports",
+        "Party Reports",
+        "GST Reports",
+        "Item / Stock Reports",
+        "Expense Reports",
+        "Loan Reports",
+        "Bill Wise Profit & Loss",
+        "GSTR-3B Summary",
+        "Stock Transfer Report",
+    ):
+        assert label in JS
+    assert ".report-category-card" in CSS
+    assert ".report-detail-sheet" in CSS
 
 
 def test_redesign_keeps_mobile_navigation_and_safe_touch_layout() -> None:

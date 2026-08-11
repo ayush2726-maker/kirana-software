@@ -144,6 +144,25 @@
       <section id="page-reports" class="page" data-page-name="reports">
         <div class="page-heading"><div><small>BUSINESS INTELLIGENCE</small><h1>Reports</h1><p>Sales, purchase, returns, tax and stock in one view.</p></div><button class="icon-button" data-action="refresh-reports" aria-label="Refresh Reports"><svg class="ui-icon"><use href="#icon-refresh" /></svg></button></div>
 
+        <div class="report-view-switch" role="tablist" aria-label="Reports view">
+          <button class="active" type="button" data-report-view="directory" role="tab" aria-selected="true">All Reports</button>
+          <button type="button" data-report-view="overview" role="tab" aria-selected="false">Business Overview</button>
+        </div>
+
+        <section id="report-directory-view" class="report-directory-view">
+          <article class="card report-directory-tools">
+            <label class="report-search"><svg class="ui-icon"><use href="#icon-search" /></svg><input id="report-search" type="search" placeholder="Search sale, GST, stock, party…" autocomplete="off" /></label>
+            <p>Choose any report. Your selected period will be applied automatically.</p>
+          </article>
+          <section id="favorite-reports-section" class="favorite-reports-section hidden">
+            <div class="report-section-heading"><div><span class="report-section-icon favorite">★</span><div><h2>Favourite Reports</h2><p>Your most-used reports</p></div></div></div>
+            <div id="favorite-reports" class="report-link-list"></div>
+          </section>
+          <div id="report-catalog" class="report-catalog"></div>
+        </section>
+
+        <section id="report-overview-view" class="report-overview-view hidden">
+
         <article class="report-filter-card card">
           <div class="report-filter-copy"><span class="section-kicker">REPORT PERIOD</span><h2 id="report-period-title">This Month</h2><p>Choose a preset or set your own date range.</p></div>
           <div class="report-presets" role="group" aria-label="Report period presets">
@@ -198,6 +217,35 @@
               <button data-export-path="/api/export/parties.csv" data-export-name="kirana-parties.csv"><svg class="ui-icon"><use href="#icon-download" /></svg><span><b>Parties</b><small>Balances and contacts</small></span></button>
             </div>
           </article>
+        </div>
+        </section>
+
+        <div id="report-detail-overlay" class="report-detail-overlay hidden" role="presentation">
+          <section class="report-detail-sheet" role="dialog" aria-modal="true" aria-labelledby="report-detail-title">
+            <header class="report-detail-header">
+              <button class="report-detail-back" type="button" data-action="close-report-detail" aria-label="Close report">‹</button>
+              <div><small>DETAILED REPORT</small><h2 id="report-detail-title">Report</h2><p id="report-detail-range">Selected period</p></div>
+              <button id="report-detail-favorite" class="report-detail-favorite" type="button" data-action="favorite-report" aria-label="Add report to favourites">☆</button>
+            </header>
+            <div class="report-detail-body">
+              <article class="report-detail-filter">
+                <label>From<input id="detail-report-from" type="date" /></label>
+                <label>To<input id="detail-report-to" type="date" /></label>
+                <button class="primary-small" type="button" data-action="run-report-detail">Apply</button>
+              </article>
+              <div id="report-detail-status" class="report-detail-status">Generating report…</div>
+              <div id="report-detail-content" class="hidden">
+                <div id="report-detail-totals" class="report-detail-totals"></div>
+                <p id="report-detail-note" class="report-detail-note hidden"></p>
+                <div class="report-table-wrap"><table class="report-data-table"><thead id="report-detail-head"></thead><tbody id="report-detail-rows"></tbody></table></div>
+                <div id="report-detail-empty" class="report-detail-empty hidden">No entries found for this period.</div>
+              </div>
+            </div>
+            <footer class="report-detail-footer">
+              <button type="button" data-action="download-report-detail"><svg class="ui-icon"><use href="#icon-download" /></svg> Download CSV</button>
+              <button class="primary" type="button" data-action="close-report-detail">Done</button>
+            </footer>
+          </section>
         </div>
       </section>
 

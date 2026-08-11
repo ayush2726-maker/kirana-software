@@ -9,11 +9,112 @@
     parties: [],
     orders: [],
     report: null,
+    reportView: 'directory',
+    detailedReport: null,
+    detailedReportKey: '',
     saleLines: [],
     itemFilter: 'all',
     partyFilter: 'all',
     transactionFilter: 'all'
   };
+
+  var REPORT_CATALOG = [
+    {
+      id: 'transactions', title: 'Transaction Reports', icon: '₹', tone: 'blue',
+      reports: [
+        ['sale_report', 'Sale Report', 'Bills, paid amount and pending balance'],
+        ['purchase_report', 'Purchase Report', 'Supplier bills and pending payments'],
+        ['day_book', 'Day Book', 'Every business entry date-wise'],
+        ['all_transactions', 'All Transactions', 'Sales, purchases, returns and entries'],
+        ['bill_wise_profit', 'Bill Wise Profit & Loss', 'Estimated profit on every sale bill'],
+        ['profit_loss', 'Profit & Loss', 'Revenue, estimated cost and expenses'],
+        ['sale_aging', 'Sale Aging Report', 'Customer dues grouped by pending days'],
+        ['purchase_aging', 'Purchase Aging Report', 'Supplier dues grouped by pending days'],
+        ['cash_flow', 'Cash Flow', 'Money in, money out and running balance'],
+        ['trial_balance', 'Trial Balance', 'Party and account closing balances'],
+        ['balance_sheet', 'Balance Sheet', 'Assets, liabilities and estimated net worth']
+      ]
+    },
+    {
+      id: 'party', title: 'Party Reports', icon: 'P', tone: 'violet',
+      reports: [
+        ['party_statement', 'Party Statement', 'All customer and supplier balances'],
+        ['all_party_report', 'All Party Report', 'Receivable and payable overview'],
+        ['party_profit', 'Party Wise Profit & Loss', 'Estimated profit earned party-wise'],
+        ['party_item', 'Party Wise Item Report', 'Items sold and purchased by party'],
+        ['party_sales', 'Sale / Purchase by Party', 'Turnover and outstanding party-wise']
+      ]
+    },
+    {
+      id: 'gst', title: 'GST Reports', icon: '%', tone: 'amber',
+      reports: [
+        ['gst_sales', 'GSTR-1', 'Outward taxable supplies working report'],
+        ['gst_purchase', 'GSTR-2', 'Purchase and input tax working report'],
+        ['gstr2b', 'GSTR-2B', 'Purchase register for 2B reconciliation'],
+        ['gst_transactions', 'GST Transaction Report', 'Taxable sales, purchases and returns'],
+        ['gstr3b', 'GSTR-3B Summary', 'Output, input and estimated GST payable'],
+        ['hsn_summary', 'Sale Summary by HSN', 'Quantity and taxable value HSN-wise'],
+        ['tax_summary', 'Tax Summary', 'Output and input GST rate-wise']
+      ]
+    },
+    {
+      id: 'stock', title: 'Item / Stock Reports', icon: '□', tone: 'green',
+      reports: [
+        ['stock_summary', 'Stock Summary Report', 'Current stock, rates and valuation'],
+        ['item_party', 'Item Report by Party', 'Item movement against every party'],
+        ['item_profit', 'Item Wise Profit & Loss', 'Estimated margin item-wise'],
+        ['low_stock', 'Low Stock Summary Report', 'Items at or below minimum stock'],
+        ['item_detail', 'Item Detail Report', 'Item master, rate and stock details'],
+        ['stock_detail', 'Stock Detail Report', 'Every stock in/out movement'],
+        ['category_trades', 'Sale / Purchase by Item Category', 'Category-wise business value'],
+        ['category_stock', 'Stock Summary by Item Category', 'Category-wise stock valuation'],
+        ['item_movement', 'Item Movement Report', 'Complete item stock trail'],
+        ['item_discount', 'Item Wise Discount', 'Allocated bill discount by item'],
+        ['item_serial', 'Item Serial / Barcode Report', 'SKU, barcode and item details'],
+        ['manufacturing', 'Manufacturing Report', 'Recorded manufacturing stock entries'],
+        ['consumption', 'Consumption Report', 'Recorded material consumption entries'],
+        ['stock_transfer', 'Stock Transfer Report', 'Recorded stock transfer entries']
+      ]
+    },
+    {
+      id: 'status', title: 'Business Status', icon: '▥', tone: 'cyan',
+      reports: [
+        ['bank_statement', 'Bank & Cash Statement', 'Account entries and current balance'],
+        ['receivable_payable', 'Receivable / Payable Report', 'Current customer and supplier balance'],
+        ['cash_flow', 'Cash Flow Report', 'Period-wise liquid money movement']
+      ]
+    },
+    {
+      id: 'taxes', title: 'Taxes', icon: 'T', tone: 'red',
+      reports: [
+        ['gst_report', 'GST Report', 'All GST transactions in one table'],
+        ['gst_rate_report', 'GST Rate Report', 'Taxable value grouped by rate'],
+        ['tcs_receivable', 'TCS Receivable', 'Recorded TCS account entries'],
+        ['tds_payable', 'TDS Payable', 'Recorded TDS payable entries'],
+        ['tds_receivable', 'TDS Receivable', 'Recorded TDS receivable entries']
+      ]
+    },
+    {
+      id: 'expenses', title: 'Expense Reports', icon: 'E', tone: 'rose',
+      reports: [
+        ['expense_transactions', 'Expense Transaction Report', 'Every expense with date and mode'],
+        ['expense_category', 'Expense Category Report', 'Expense totals grouped by category']
+      ]
+    },
+    {
+      id: 'orders', title: 'Sale / Purchase Order Reports', icon: 'O', tone: 'indigo',
+      reports: [
+        ['order_transactions', 'Sale / Purchase Order Report', 'Open and completed business orders'],
+        ['challan_report', 'Sale / Purchase Challan Report', 'Delivery challan register']
+      ]
+    },
+    {
+      id: 'loans', title: 'Loan Reports', icon: 'L', tone: 'slate',
+      reports: [
+        ['loan_statement', 'Loan Statement', 'Loans received, given and net position']
+      ]
+    }
+  ];
 
   function one(selector, root) {
     return (root || document).querySelector(selector);
@@ -137,7 +238,7 @@
     });
     window.scrollTo(0, 0);
     try {
-      history.replaceState(null, '', '/?page=' + encodeURIComponent(pageName) + '&stable=173');
+      history.replaceState(null, '', '/?page=' + encodeURIComponent(pageName) + '&stable=174');
     } catch (ignore) {}
 
     if (pageName === 'dashboard') loadDashboard();
@@ -145,7 +246,10 @@
     if (pageName === 'items') renderItems();
     if (pageName === 'parties') renderParties();
     if (pageName === 'transactions') renderTransactions();
-    if (pageName === 'reports') loadReports();
+    if (pageName === 'reports') {
+      renderReportCatalog();
+      if (state.reportView === 'overview') loadReports();
+    }
     if (pageName === 'orders') loadOrders();
     if (pageName === 'settings') fillBusinessForm();
     if (pageName === 'sale') prepareSalePage();
@@ -409,6 +513,219 @@
         return '<div class="ranked-row"><span class="ranked-number">' + (index + 1) + '</span><div><b>' + escapeHtml(item.item_name) + '</b><small>' + escapeHtml(details) + '</small></div><strong>' + money(item.amount) + '</strong></div>';
       }).join('');
     }
+  }
+
+  function reportMeta(key) {
+    var found = null;
+    REPORT_CATALOG.some(function (category) {
+      return category.reports.some(function (report) {
+        if (report[0] !== key) return false;
+        found = { key: report[0], title: report[1], description: report[2], category: category.title };
+        return true;
+      });
+    });
+    return found;
+  }
+
+  function favoriteReportKeys() {
+    try {
+      var values = JSON.parse(localStorage.getItem('kirana_report_favorites') || '[]');
+      return Array.isArray(values) ? values.filter(function (value) { return reportMeta(String(value)); }) : [];
+    } catch (ignore) {
+      return [];
+    }
+  }
+
+  function saveFavoriteReportKeys(keys) {
+    try { localStorage.setItem('kirana_report_favorites', JSON.stringify(keys)); } catch (ignore) {}
+  }
+
+  function reportLinkHtml(report, favorites) {
+    var key = report[0];
+    var saved = favorites.indexOf(key) >= 0;
+    return '<article class="report-link-row" data-report-row="' + escapeHtml(key) + '">' +
+      '<button class="report-link-main" type="button" data-action="open-report-detail" data-report-key="' + escapeHtml(key) + '">' +
+        '<span><b>' + escapeHtml(report[1]) + '</b><small>' + escapeHtml(report[2]) + '</small></span><i>›</i>' +
+      '</button>' +
+      '<button class="report-link-star' + (saved ? ' saved' : '') + '" type="button" data-action="toggle-report-favorite" data-report-key="' + escapeHtml(key) + '" aria-label="' + (saved ? 'Remove from favourites' : 'Add to favourites') + '">' + (saved ? '★' : '☆') + '</button>' +
+    '</article>';
+  }
+
+  function renderReportCatalog() {
+    var container = one('#report-catalog');
+    if (!container) return;
+    var input = one('#report-search');
+    var query = String(input ? input.value : '').trim().toLowerCase();
+    var favorites = favoriteReportKeys();
+    var sections = REPORT_CATALOG.map(function (category) {
+      var reports = category.reports.filter(function (report) {
+        if (!query) return true;
+        return [report[1], report[2], category.title].join(' ').toLowerCase().indexOf(query) >= 0;
+      });
+      if (!reports.length) return '';
+      return '<section class="report-category-card" data-report-category="' + escapeHtml(category.id) + '">' +
+        '<div class="report-section-heading"><div><span class="report-section-icon ' + escapeHtml(category.tone) + '">' + escapeHtml(category.icon) + '</span><div><h2>' + escapeHtml(category.title) + '</h2><p>' + reports.length + ' available reports</p></div></div><span class="report-category-count">' + reports.length + '</span></div>' +
+        '<div class="report-link-list">' + reports.map(function (report) { return reportLinkHtml(report, favorites); }).join('') + '</div>' +
+      '</section>';
+    }).join('');
+    container.innerHTML = sections || '<div class="report-directory-empty">No report matches “' + escapeHtml(query) + '”.</div>';
+
+    var favoriteSection = one('#favorite-reports-section');
+    var favoriteContainer = one('#favorite-reports');
+    if (!favoriteSection || !favoriteContainer) return;
+    var favoriteReports = favorites.map(function (key) {
+      var meta = reportMeta(key);
+      return meta ? [meta.key, meta.title, meta.description] : null;
+    }).filter(Boolean).filter(function (report) {
+      return !query || [report[1], report[2]].join(' ').toLowerCase().indexOf(query) >= 0;
+    });
+    favoriteSection.classList.toggle('hidden', !favoriteReports.length);
+    favoriteContainer.innerHTML = favoriteReports.map(function (report) { return reportLinkHtml(report, favorites); }).join('');
+  }
+
+  function setReportView(view) {
+    state.reportView = view === 'overview' ? 'overview' : 'directory';
+    var directory = one('#report-directory-view');
+    var overview = one('#report-overview-view');
+    if (directory) directory.classList.toggle('hidden', state.reportView !== 'directory');
+    if (overview) overview.classList.toggle('hidden', state.reportView !== 'overview');
+    all('[data-report-view]').forEach(function (button) {
+      var active = button.getAttribute('data-report-view') === state.reportView;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    if (state.reportView === 'overview') loadReports();
+    else renderReportCatalog();
+  }
+
+  function toggleReportFavorite(key) {
+    if (!reportMeta(key)) return;
+    var favorites = favoriteReportKeys();
+    var index = favorites.indexOf(key);
+    if (index >= 0) favorites.splice(index, 1);
+    else favorites.unshift(key);
+    saveFavoriteReportKeys(favorites);
+    renderReportCatalog();
+    syncReportDetailFavorite();
+    toast(index >= 0 ? 'Removed from favourite reports' : 'Added to favourite reports');
+  }
+
+  function syncReportDetailFavorite() {
+    var button = one('#report-detail-favorite');
+    if (!button) return;
+    var saved = favoriteReportKeys().indexOf(state.detailedReportKey) >= 0;
+    button.textContent = saved ? '★' : '☆';
+    button.classList.toggle('saved', saved);
+    button.setAttribute('aria-label', saved ? 'Remove report from favourites' : 'Add report to favourites');
+  }
+
+  function openDetailedReport(key) {
+    var meta = reportMeta(key);
+    var overlay = one('#report-detail-overlay');
+    if (!meta || !overlay) return;
+    state.detailedReportKey = key;
+    state.detailedReport = null;
+    setText('#report-detail-title', meta.title);
+    var from = one('#report-from').value || monthStart(new Date());
+    var to = one('#report-to').value || today();
+    one('#detail-report-from').value = from;
+    one('#detail-report-to').value = to;
+    overlay.classList.remove('hidden');
+    document.body.classList.add('report-detail-open');
+    syncReportDetailFavorite();
+    loadDetailedReport();
+  }
+
+  function closeDetailedReport() {
+    var overlay = one('#report-detail-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    document.body.classList.remove('report-detail-open');
+  }
+
+  function reportValue(value, format) {
+    if (format === 'money') {
+      var amount = number(value);
+      return amount < 0 ? '-₹' + Math.abs(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : money(amount);
+    }
+    if (format === 'number') return number(value).toLocaleString('en-IN', { maximumFractionDigits: 3 });
+    if (format === 'percent') return number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + '%';
+    if (format === 'date') return friendlyDate(value);
+    return String(value == null || value === '' ? '—' : value).replace(/_/g, ' ');
+  }
+
+  function renderDetailedReport() {
+    var report = state.detailedReport || {};
+    var totals = report.totals || [];
+    var columns = report.columns || [];
+    var rows = report.rows || [];
+    setText('#report-detail-range', friendlyDate(report.date_from) + ' – ' + friendlyDate(report.date_to));
+    one('#report-detail-totals').innerHTML = totals.map(function (total) {
+      return '<article><small>' + escapeHtml(total.label) + '</small><strong>' + escapeHtml(reportValue(total.value, total.format)) + '</strong></article>';
+    }).join('');
+    var note = one('#report-detail-note');
+    note.textContent = report.note || '';
+    note.classList.toggle('hidden', !report.note);
+    one('#report-detail-head').innerHTML = '<tr>' + columns.map(function (column) { return '<th>' + escapeHtml(column.label) + '</th>'; }).join('') + '</tr>';
+    one('#report-detail-rows').innerHTML = rows.map(function (row) {
+      return '<tr>' + columns.map(function (column) {
+        var formatted = reportValue(row[column.key], column.format);
+        var numeric = column.format === 'money' || column.format === 'number' || column.format === 'percent';
+        return '<td' + (numeric ? ' class="numeric"' : '') + '>' + escapeHtml(formatted) + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    one('#report-detail-empty').classList.toggle('hidden', rows.length > 0);
+  }
+
+  async function loadDetailedReport() {
+    if (!state.detailedReportKey) return;
+    var status = one('#report-detail-status');
+    var content = one('#report-detail-content');
+    var from = one('#detail-report-from').value || monthStart(new Date());
+    var to = one('#detail-report-to').value || today();
+    if (from > to) {
+      status.textContent = 'The From date cannot be after the To date.';
+      status.className = 'report-detail-status error';
+      content.classList.add('hidden');
+      return;
+    }
+    status.textContent = 'Generating report…';
+    status.className = 'report-detail-status';
+    status.classList.remove('hidden');
+    content.classList.add('hidden');
+    try {
+      state.detailedReport = await api('/api/reports/detail?report=' + encodeURIComponent(state.detailedReportKey) + '&date_from=' + encodeURIComponent(from) + '&date_to=' + encodeURIComponent(to));
+      renderDetailedReport();
+      status.classList.add('hidden');
+      content.classList.remove('hidden');
+    } catch (error) {
+      status.textContent = error.message || 'Report could not be generated.';
+      status.className = 'report-detail-status error';
+    }
+  }
+
+  function csvCell(value) {
+    var text = String(value == null ? '' : value);
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+
+  function downloadDetailedReport() {
+    var report = state.detailedReport;
+    if (!report) return toast('Generate the report first', true);
+    var columns = report.columns || [];
+    var lines = [columns.map(function (column) { return csvCell(column.label); }).join(',')];
+    (report.rows || []).forEach(function (row) {
+      lines.push(columns.map(function (column) { return csvCell(row[column.key]); }).join(','));
+    });
+    var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = String(report.report || 'business-report').replace(/[^a-z0-9_-]+/gi, '-') + '-' + report.date_from + '-to-' + report.date_to + '.csv';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    toast('Report CSV downloaded');
   }
 
   async function downloadProtected(path, filename) {
@@ -792,11 +1109,21 @@
       if (!actionButton) return;
       var action = actionButton.getAttribute('data-action');
       var id = Number(actionButton.getAttribute('data-id') || 0);
+      var reportKey = actionButton.getAttribute('data-report-key') || state.detailedReportKey;
       event.preventDefault();
 
       if (action === 'home') navigate('home');
       if (action === 'refresh-dashboard') loadDashboard();
-      if (action === 'refresh-reports') loadReports();
+      if (action === 'refresh-reports') {
+        if (!one('#report-detail-overlay').classList.contains('hidden')) loadDetailedReport();
+        else if (state.reportView === 'overview') loadReports();
+        else { renderReportCatalog(); toast('Reports refreshed'); }
+      }
+      if (action === 'open-report-detail') openDetailedReport(reportKey);
+      if (action === 'close-report-detail') closeDetailedReport();
+      if (action === 'toggle-report-favorite' || action === 'favorite-report') toggleReportFavorite(reportKey);
+      if (action === 'run-report-detail') loadDetailedReport();
+      if (action === 'download-report-detail') downloadDetailedReport();
       if (action === 'new-item') openItemModal(null);
       if (action === 'edit-item') openItemModal(state.items.find(function (item) { return Number(item.id) === id; }));
       if (action === 'new-party') openPartyModal(null);
@@ -868,6 +1195,20 @@
         all('[data-transaction-filter]').forEach(function (node) { node.classList.toggle('active', node === button); });
         renderTransactions();
       });
+    });
+
+    all('[data-report-view]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        setReportView(button.getAttribute('data-report-view'));
+      });
+    });
+
+    one('#report-search').addEventListener('input', renderReportCatalog);
+    one('#report-detail-overlay').addEventListener('click', function (event) {
+      if (event.target === event.currentTarget) closeDetailedReport();
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !one('#report-detail-overlay').classList.contains('hidden')) closeDetailedReport();
     });
 
     all('[data-report-preset]').forEach(function (button) {

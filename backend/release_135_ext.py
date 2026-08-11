@@ -42,6 +42,8 @@ import backend.quick_write_ai_tab_ui_ext  # noqa: F401
 import backend.quick_write_voice_step_prompt_ext  # noqa: F401
 # Build 172: single AI entry point + speak every step before listening.
 import backend.quick_write_ai_voice_ui_fix_ext  # noqa: F401
+# Build 174: final shared mobile UI for Handwriting and AI Bill.
+import backend.quick_write_ui_174_ext  # noqa: F401
 import backend.native_owner_app_ext as native_owner
 import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
