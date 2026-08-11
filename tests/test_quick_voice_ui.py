@@ -13,6 +13,7 @@ print(json.dumps({
     "native": "window.KiranaVoice && typeof window.KiranaVoice.start==='function'" in html,
     "chrome": "window.SpeechRecognition||window.webkitSpeechRecognition" in html,
     "permission": "navigator.mediaDevices.getUserMedia({audio:true})" in html,
+    "probe_fallback": "Direct phone voice try ho rahi hai…" in html,
     "manual": "box.id='aiManualVoice2'" in html,
     "ui": "kirana-quick-write-ui-174" in html,
     "version": quick_canvas.VERSION,
@@ -25,9 +26,10 @@ print(json.dumps({
         "native": True,
         "chrome": True,
         "permission": True,
+        "probe_fallback": True,
         "manual": True,
         "ui": True,
-        "version": "175",
+        "version": "176",
         "runtime_join_ok": True,
     }
 
@@ -39,4 +41,4 @@ def test_quick_write_runtime_scripts_are_separated() -> None:
         capture_output=True,
         text=True,
     )
-    assert source.stdout.strip() == "175"
+    assert source.stdout.strip() == "176"

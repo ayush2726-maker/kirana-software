@@ -10,7 +10,7 @@ unchanged while both tabs share one predictable mobile-first design.
 import backend.quick_write_canvas_fix_ext as quick_canvas
 
 
-VERSION = "175"
+VERSION = "176"
 html = quick_canvas.HTML
 
 # An older compatibility layer appends another IIFE immediately after the

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import backend.quick_write_canvas_fix_ext as quick_canvas
 
-VERSION = "164"
+VERSION = "176"
 
 html = quick_canvas.HTML
 
@@ -97,9 +97,17 @@ runtime_js = r'''
           try{stream.getTracks().forEach(function(track){track.stop()})}catch(_){}
           begin();
         }).catch(function(error){
-          browserVoiceStarting2=false;
           var denied=error&&(error.name==='NotAllowedError'||error.name==='PermissionDeniedError');
-          manualVoice2(denied?'Mic permission blocked hai. Chrome site settings me Microphone Allow karein, ya neeche keyboard mic use karein.':'Phone mic start nahi hua. Neeche keyboard mic ya typing use karein.');
+          if(denied){
+            browserVoiceStarting2=false;
+            manualVoice2('Mic permission blocked hai. Chrome site settings me Microphone Allow karein, ya neeche keyboard mic use karein.');
+            return;
+          }
+          // Some Android WebViews reject getUserMedia even though their
+          // system SpeechRecognizer is available. The permission probe is
+          // only advisory there, so still try the recognizer itself.
+          show('Direct phone voice try ho rahi hai…');
+          begin();
         });
         return true;
       }

@@ -9,7 +9,7 @@ from backend.app import app, db
 from backend.owner_session_ext import COOKIE_NAME, _session_row
 import backend.quick_write_canvas_fix_ext as quick_canvas
 
-VERSION = "163"
+VERSION = "176"
 
 
 @app.post("/api/quick-bill/customer")
@@ -206,7 +206,7 @@ voice_js = r'''
     try{
       if(navigator.mediaDevices&&typeof navigator.mediaDevices.getUserMedia==='function'){
         show('Microphone permission check ho rahi hai…');
-        navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){try{stream.getTracks().forEach(function(track){track.stop()})}catch(_){}begin()}).catch(function(error){browserVoiceStarting=false;var denied=error&&(error.name==='NotAllowedError'||error.name==='PermissionDeniedError');manualVoice(denied?'Mic permission blocked hai. Chrome site settings me Microphone Allow karein, ya keyboard mic use karein.':'Phone mic start nahi hua. Keyboard mic ya typing use karein.')});return true;
+        navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){try{stream.getTracks().forEach(function(track){track.stop()})}catch(_){}begin()}).catch(function(error){var denied=error&&(error.name==='NotAllowedError'||error.name==='PermissionDeniedError');if(denied){browserVoiceStarting=false;manualVoice('Mic permission blocked hai. Chrome site settings me Microphone Allow karein, ya keyboard mic use karein.');return}show('Direct phone voice try ho rahi hai…');begin()});return true;
       }
     }catch(_){}
     return begin();
