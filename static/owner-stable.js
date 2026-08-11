@@ -8,6 +8,7 @@
     items: [],
     parties: [],
     orders: [],
+    report: null,
     saleLines: [],
     itemFilter: 'all',
     partyFilter: 'all',
@@ -41,7 +42,43 @@
   }
 
   function today() {
-    return new Date().toISOString().slice(0, 10);
+    var now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 10);
+  }
+
+  function isoDate(value) {
+    var date = new Date(value.getTime());
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    return date.toISOString().slice(0, 10);
+  }
+
+  function monthStart(value) {
+    return isoDate(new Date(value.getFullYear(), value.getMonth(), 1));
+  }
+
+  function friendlyDate(value) {
+    if (!value) return '';
+    var parts = String(value).split('-').map(Number);
+    if (parts.length !== 3) return String(value);
+    return new Date(parts[0], parts[1] - 1, parts[2]).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  function setHomeContext() {
+    var now = new Date();
+    var hour = now.getHours();
+    var greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    var owner = state.me && state.me.business ? (state.me.business.owner_name || '') : '';
+    setText('#home-greeting', greeting + (owner ? ', ' + owner.split(' ')[0] : '') + '.');
+    setText('#home-date', now.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    }).toUpperCase());
   }
 
   function toast(message, isError) {
@@ -100,7 +137,7 @@
     });
     window.scrollTo(0, 0);
     try {
-      history.replaceState(null, '', '/?page=' + encodeURIComponent(pageName) + '&stable=100');
+      history.replaceState(null, '', '/?page=' + encodeURIComponent(pageName) + '&stable=173');
     } catch (ignore) {}
 
     if (pageName === 'dashboard') loadDashboard();
@@ -108,6 +145,7 @@
     if (pageName === 'items') renderItems();
     if (pageName === 'parties') renderParties();
     if (pageName === 'transactions') renderTransactions();
+    if (pageName === 'reports') loadReports();
     if (pageName === 'orders') loadOrders();
     if (pageName === 'settings') fillBusinessForm();
     if (pageName === 'sale') prepareSalePage();
@@ -121,6 +159,8 @@
       setText('#business-name', business.name || 'Kirana Software');
       setText('#business-subtitle', business.phone || 'Billing, Inventory & Accounts');
       setText('#profile-button', String(business.owner_name || business.name || 'A').charAt(0).toUpperCase());
+      setHomeContext();
+      setReportPreset('month', false);
       fillBusinessForm();
       one('#customer-link').value = window.location.origin + '/customer';
       one('#sale-date').value = today();
@@ -236,6 +276,12 @@
     setText('#dash-purchases', money(data.purchases_month));
     setText('#dash-cash', money(data.cash_balance));
     setText('#dash-stock', money(data.stock_value));
+    setText('#home-receivable', money(data.receivable));
+    setText('#home-sales', money(data.sales_month));
+
+    var netPosition = number(data.receivable) - number(data.payable);
+    setText('#dash-net-position', money(Math.abs(netPosition)));
+    setText('#dash-net-caption', netPosition >= 0 ? 'Net amount receivable after payable' : 'Net amount payable after receivable');
 
     var activity = one('#dashboard-activity');
     var activityRows = (data.activity || []).slice(0, 8);
@@ -250,6 +296,141 @@
     else low.innerHTML = lowRows.map(function (item) {
       return '<div class="compact-row"><div><b>' + escapeHtml(item.name) + '</b><small>Minimum ' + escapeHtml(item.min_stock) + ' ' + escapeHtml(item.unit) + '</small></div><strong>' + escapeHtml(item.stock) + '</strong></div>';
     }).join('');
+  }
+
+  function setReportPreset(preset, shouldLoad) {
+    var now = new Date();
+    var start = today();
+    var end = today();
+    var title = 'Custom Range';
+
+    if (preset === 'today') {
+      title = 'Today';
+    } else if (preset === 'month') {
+      start = monthStart(now);
+      title = 'This Month';
+    } else if (preset === 'last-month') {
+      var first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      var last = new Date(now.getFullYear(), now.getMonth(), 0);
+      start = isoDate(first);
+      end = isoDate(last);
+      title = 'Last Month';
+    } else if (preset === 'year') {
+      start = isoDate(new Date(now.getFullYear(), 0, 1));
+      title = 'This Year';
+    }
+
+    var fromInput = one('#report-from');
+    var toInput = one('#report-to');
+    if (fromInput) fromInput.value = start;
+    if (toInput) toInput.value = end;
+    setText('#report-period-title', title);
+    all('[data-report-preset]').forEach(function (button) {
+      button.classList.toggle('active', button.getAttribute('data-report-preset') === preset);
+    });
+    if (shouldLoad) loadReports();
+  }
+
+  function markCustomReportRange() {
+    all('[data-report-preset]').forEach(function (button) { button.classList.remove('active'); });
+    setText('#report-period-title', 'Custom Range');
+  }
+
+  async function loadReports() {
+    var fromInput = one('#report-from');
+    var toInput = one('#report-to');
+    var status = one('#report-status');
+    var content = one('#report-content');
+    if (!fromInput || !toInput || !status || !content) return;
+
+    var from = fromInput.value || monthStart(new Date());
+    var to = toInput.value || today();
+    if (from > to) {
+      status.textContent = 'The From date cannot be after the To date.';
+      status.className = 'report-status error';
+      content.classList.add('hidden');
+      return;
+    }
+
+    status.textContent = 'Generating business report…';
+    status.className = 'report-status';
+    status.classList.remove('hidden');
+    content.classList.add('hidden');
+
+    try {
+      state.report = await api('/api/reports/summary?date_from=' + encodeURIComponent(from) + '&date_to=' + encodeURIComponent(to));
+      renderReports();
+      status.classList.add('hidden');
+      content.classList.remove('hidden');
+    } catch (error) {
+      status.textContent = error.message || 'Report could not be generated.';
+      status.className = 'report-status error';
+      content.classList.add('hidden');
+    }
+  }
+
+  function renderReports() {
+    var report = state.report || {};
+    var sales = report.sales || {};
+    var purchases = report.purchases || {};
+    var saleReturns = report.sale_returns || {};
+    var purchaseReturns = report.purchase_returns || {};
+    var netSales = number(report.net_sales != null ? report.net_sales : sales.amount);
+    var netPurchases = number(report.net_purchases != null ? report.net_purchases : purchases.amount);
+    var taxMovement = number(sales.tax) + number(purchases.tax) - number(saleReturns.tax) - number(purchaseReturns.tax);
+
+    setText('#report-net-sales', money(netSales));
+    setText('#report-net-purchases', money(netPurchases));
+    setText('#report-margin', money(report.gross_margin_estimate));
+    setText('#report-stock', money(report.stock_value));
+    setText('#report-sales-meta', number(sales.count) + ' bills · returns ' + money(saleReturns.amount));
+    setText('#report-purchases-meta', number(purchases.count) + ' entries · returns ' + money(purchaseReturns.amount));
+    setText('#report-sale-returns', money(saleReturns.amount));
+    setText('#report-purchase-returns', money(purchaseReturns.amount));
+    setText('#report-tax', money(taxMovement));
+    setText('#report-sales-due', money(sales.due));
+    setText('#report-bar-sales-value', money(netSales));
+    setText('#report-bar-purchases-value', money(netPurchases));
+    setText('#report-range-label', friendlyDate(report.date_from) + ' – ' + friendlyDate(report.date_to));
+
+    var scale = Math.max(Math.abs(netSales), Math.abs(netPurchases), 1);
+    var salesWidth = netSales ? Math.max(7, Math.round(Math.abs(netSales) / scale * 100)) : 0;
+    var purchaseWidth = netPurchases ? Math.max(7, Math.round(Math.abs(netPurchases) / scale * 100)) : 0;
+    one('#report-sales-bar').style.width = salesWidth + '%';
+    one('#report-purchases-bar').style.width = purchaseWidth + '%';
+
+    var topItems = one('#report-top-items');
+    var rows = report.top_items || [];
+    if (!rows.length) {
+      showEmpty(topItems, 'No item sales in this period');
+    } else {
+      topItems.innerHTML = rows.map(function (item, index) {
+        var details = [item.size, number(item.qty).toLocaleString('en-IN') + ' qty'].filter(Boolean).join(' · ');
+        return '<div class="ranked-row"><span class="ranked-number">' + (index + 1) + '</span><div><b>' + escapeHtml(item.item_name) + '</b><small>' + escapeHtml(details) + '</small></div><strong>' + money(item.amount) + '</strong></div>';
+      }).join('');
+    }
+  }
+
+  async function downloadProtected(path, filename) {
+    try {
+      var response = await fetch(path, { credentials: 'include', cache: 'no-store' });
+      if (!response.ok) {
+        var data = await response.json().catch(function () { return null; });
+        throw new Error(data && data.detail ? data.detail : 'Download failed (' + response.status + ')');
+      }
+      var blob = await response.blob();
+      var url = URL.createObjectURL(blob);
+      var anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+      toast(filename + ' downloaded');
+    } catch (error) {
+      toast(error.message, true);
+    }
   }
 
   function itemText(item) {
@@ -395,7 +576,7 @@
     one('#sale-item-search').value = '';
     one('#sale-discount').value = 0;
     one('#sale-paid').value = 0;
-    one('#sale-payment-mode').value = 'cash';
+    one('#sale-payment-mode').value = 'credit';
     one('#sale-notes').value = '';
     one('#sale-date').value = today();
     one('#sale-item-results').classList.add('hidden');
@@ -572,6 +753,8 @@
       state.me.business = business;
       setText('#business-name', business.name || 'Kirana Software');
       setText('#business-subtitle', business.phone || 'Billing, Inventory & Accounts');
+      setText('#profile-button', String(business.owner_name || business.name || 'A').charAt(0).toUpperCase());
+      setHomeContext();
       toast('Business settings saved');
     } catch (error) {
       toast(error.message, true);
@@ -613,6 +796,7 @@
 
       if (action === 'home') navigate('home');
       if (action === 'refresh-dashboard') loadDashboard();
+      if (action === 'refresh-reports') loadReports();
       if (action === 'new-item') openItemModal(null);
       if (action === 'edit-item') openItemModal(state.items.find(function (item) { return Number(item.id) === id; }));
       if (action === 'new-party') openPartyModal(null);
@@ -685,6 +869,22 @@
         renderTransactions();
       });
     });
+
+    all('[data-report-preset]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        setReportPreset(button.getAttribute('data-report-preset'), true);
+      });
+    });
+
+    all('[data-export-path]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        downloadProtected(button.getAttribute('data-export-path'), button.getAttribute('data-export-name'));
+      });
+    });
+
+    one('#report-from').addEventListener('change', markCustomReportRange);
+    one('#report-to').addEventListener('change', markCustomReportRange);
+    one('#load-report').addEventListener('click', loadReports);
 
     one('#item-form').addEventListener('submit', saveItem);
     one('#party-form').addEventListener('submit', saveParty);

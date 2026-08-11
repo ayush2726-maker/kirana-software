@@ -160,6 +160,12 @@ def main() -> None:
         page.wait_for_selector("#page-dashboard.active", timeout=8_000)
         assert page.locator("#dash-sales").is_visible()
 
+        page.locator('.topbar [data-page="reports"]').click()
+        page.wait_for_selector("#page-reports.active", timeout=8_000)
+        page.wait_for_selector("#report-content:not(.hidden)", timeout=12_000)
+        assert page.locator("#report-net-sales").is_visible()
+        assert page.locator("#report-net-purchases").is_visible()
+
         page.locator('.bottom-nav [data-page="items"]').click()
         page.wait_for_selector("#page-items.active", timeout=8_000)
         add_item(page, "Test Rice", "1 kg", "80", "60", "20")

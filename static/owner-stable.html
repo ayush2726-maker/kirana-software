@@ -3,108 +3,217 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#087fbf" />
+  <meta name="theme-color" content="#2463eb" />
   <meta name="description" content="Kirana Software owner billing app" />
   <title>Kirana Software</title>
   <link rel="stylesheet" href="/owner-stable.css?v=__OWNER_VERSION__" />
 </head>
 <body>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false">
+    <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></symbol>
+    <symbol id="icon-dashboard" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="icon-items" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 8 9 5 9-5M3 12l9 5 9-5M3 16l9 5 9-5"/></symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="icon-sale" viewBox="0 0 24 24"><path d="M7 4h10M7 8h10M8 4c5 0 5 7 0 7h-1l8 9M7 11h5"/></symbol>
+    <symbol id="icon-report" viewBox="0 0 24 24"><path d="M5 3h14v18H5z"/><path d="m8 16 3-4 3 2 3-5"/></symbol>
+    <symbol id="icon-transaction" viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></symbol>
+    <symbol id="icon-party" viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-3-3.87M16 2.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="icon-order" viewBox="0 0 24 24"><path d="M3 3h2l2 13h11l2-9H6M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM18 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"/></symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1V21h-4v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1V3h4v.09a1.7 1.7 0 0 0 1 1.51 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.12.37.34.72.6 1 .26.28.63.42 1 .4h.09v4H21a1.7 1.7 0 0 0-1.6.6Z"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="icon-ai" viewBox="0 0 24 24"><path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3Z"/><path d="m18.5 14 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 8a7 7 0 0 1 11.5-1L20 12M4 12l2.4 5a7 7 0 0 0 11.5-1"/></symbol>
+  </svg>
+
   <div id="app-loading" class="app-loading">
     <div class="loading-logo">K</div>
     <strong>Kirana Software</strong>
-    <span>Loading your business...</span>
+    <span>Preparing your business workspace…</span>
+    <div class="loading-bar"><i></i></div>
   </div>
 
   <div id="app" class="app hidden">
     <header class="topbar">
-      <button class="topbar-logo" data-action="home" aria-label="Home">K</button>
+      <button class="topbar-logo" data-action="home" aria-label="Go to Home">K</button>
       <div class="topbar-title">
         <strong id="business-name">Kirana Software</strong>
         <small id="business-subtitle">Billing, Inventory & Accounts</small>
       </div>
-      <button class="round-button" data-page="settings" aria-label="Settings">⚙</button>
-      <button id="profile-button" class="avatar-button" data-page="menu" aria-label="Menu">A</button>
+      <button class="round-button" data-page="reports" aria-label="Open Reports" title="Reports"><svg class="ui-icon"><use href="#icon-report" /></svg></button>
+      <button id="profile-button" class="avatar-button" data-page="menu" aria-label="Open Menu">A</button>
     </header>
 
     <main class="main-content">
       <section id="page-home" class="page active" data-page-name="home">
-        <div class="segment-row">
-          <button class="active">Transaction Details</button>
-          <button data-page="parties">Party Details</button>
-        </div>
-
-        <article class="card quick-card">
-          <h2>Quick Links</h2>
-          <div class="quick-grid">
-            <button data-page="sale"><span class="quick-icon sale">₹</span><b>Add Sale</b></button>
-            <button data-page="transactions"><span class="quick-icon">▤</span><b>Sales Report</b></button>
-            <button data-page="settings"><span class="quick-icon">⚙</span><b>Settings</b></button>
-            <button data-page="menu"><span class="quick-icon">›</span><b>Show All</b></button>
+        <article class="home-hero">
+          <div class="home-hero-copy">
+            <span id="home-date" class="hero-eyebrow">TODAY</span>
+            <h1 id="home-greeting">Your business, at a glance.</h1>
+            <p>Billing, stock and collections—everything important in one place.</p>
+          </div>
+          <div class="hero-actions">
+            <button class="hero-primary" data-page="sale"><svg class="ui-icon"><use href="#icon-sale" /></svg>New Sale</button>
+            <a class="hero-secondary" href="/owner/quick-bill?direct=173"><svg class="ui-icon"><use href="#icon-ai" /></svg>AI Bill</a>
+          </div>
+          <div class="hero-metrics">
+            <div><small>You'll Get</small><strong id="home-receivable">₹0.00</strong></div>
+            <div><small>Sales This Month</small><strong id="home-sales">₹0.00</strong></div>
           </div>
         </article>
 
-        <label class="search-card">
-          <span>⌕</span>
-          <input id="activity-search" type="search" placeholder="Search transactions" autocomplete="off" />
-        </label>
+        <article class="card quick-card">
+          <div class="card-title"><div><span class="section-kicker">SHORTCUTS</span><h2>Quick actions</h2></div></div>
+          <div class="quick-grid">
+            <button data-page="sale"><span class="quick-icon red"><svg class="ui-icon"><use href="#icon-sale" /></svg></span><b>Add Sale</b><small>Create bill</small></button>
+            <button data-page="reports"><span class="quick-icon purple"><svg class="ui-icon"><use href="#icon-report" /></svg></span><b>Reports</b><small>Business insights</small></button>
+            <button data-page="items"><span class="quick-icon green"><svg class="ui-icon"><use href="#icon-items" /></svg></span><b>Items</b><small>Stock & rates</small></button>
+            <button data-page="menu"><span class="quick-icon blue"><svg class="ui-icon"><use href="#icon-transaction" /></svg></span><b>All Txn</b><small>Every transaction</small></button>
+          </div>
+        </article>
 
+        <div class="section-heading">
+          <div><span class="section-kicker">ACTIVITY</span><h2>Recent transactions</h2></div>
+          <button class="text-button" data-page="transactions">View all</button>
+        </div>
+        <label class="search-card">
+          <svg class="ui-icon"><use href="#icon-search" /></svg>
+          <input id="activity-search" type="search" placeholder="Search invoice, party or amount" autocomplete="off" />
+        </label>
         <div id="activity-list" class="list-stack"></div>
-        <button class="primary-fab" data-page="sale"><span>₹</span> Add New Sale</button>
+        <button class="primary-fab" data-page="sale"><svg class="ui-icon"><use href="#icon-sale" /></svg><span>New Sale</span></button>
       </section>
 
       <section id="page-dashboard" class="page" data-page-name="dashboard">
-        <div class="page-heading"><div><small>OVERVIEW</small><h1>Dashboard</h1></div><button class="text-button" data-action="refresh-dashboard">Refresh</button></div>
-        <div class="stat-grid two">
-          <article class="stat-card positive"><small>You'll Get</small><strong id="dash-receivable">₹0.00</strong></article>
-          <article class="stat-card negative"><small>You'll Give</small><strong id="dash-payable">₹0.00</strong></article>
-          <article class="stat-card"><small>Sales This Month</small><strong id="dash-sales">₹0.00</strong></article>
-          <article class="stat-card"><small>Purchases This Month</small><strong id="dash-purchases">₹0.00</strong></article>
-          <article class="stat-card"><small>Cash In Hand</small><strong id="dash-cash">₹0.00</strong></article>
-          <article class="stat-card"><small>Stock Value</small><strong id="dash-stock">₹0.00</strong></article>
+        <div class="page-heading">
+          <div><small>BUSINESS OVERVIEW</small><h1>Dashboard</h1><p>Live position of sales, dues and inventory.</p></div>
+          <button class="icon-button" data-action="refresh-dashboard" aria-label="Refresh Dashboard"><svg class="ui-icon"><use href="#icon-refresh" /></svg></button>
         </div>
-        <article class="card">
-          <div class="card-title"><h2>Recent Activity</h2><button class="text-button" data-page="transactions">View All</button></div>
-          <div id="dashboard-activity" class="compact-list"></div>
+        <article class="dashboard-banner">
+          <div><small>NET OUTSTANDING POSITION</small><strong id="dash-net-position">₹0.00</strong><span id="dash-net-caption">Receivable after payable</span></div>
+          <svg class="dashboard-mark ui-icon"><use href="#icon-dashboard" /></svg>
         </article>
-        <article class="card">
-          <div class="card-title"><h2>Low Stock</h2><button class="text-button" data-page="items">View Items</button></div>
-          <div id="dashboard-low-stock" class="compact-list"></div>
-        </article>
+        <div class="stat-grid two">
+          <article class="stat-card positive"><span class="stat-icon">↓</span><div><small>You'll Get</small><strong id="dash-receivable">₹0.00</strong></div></article>
+          <article class="stat-card negative"><span class="stat-icon">↑</span><div><small>You'll Give</small><strong id="dash-payable">₹0.00</strong></div></article>
+          <article class="stat-card"><span class="stat-icon">₹</span><div><small>Sales This Month</small><strong id="dash-sales">₹0.00</strong></div></article>
+          <article class="stat-card amber"><span class="stat-icon">P</span><div><small>Purchases This Month</small><strong id="dash-purchases">₹0.00</strong></div></article>
+          <article class="stat-card"><span class="stat-icon">C</span><div><small>Cash In Hand</small><strong id="dash-cash">₹0.00</strong></div></article>
+          <article class="stat-card purple"><span class="stat-icon">S</span><div><small>Stock Value</small><strong id="dash-stock">₹0.00</strong></div></article>
+        </div>
+        <div class="dashboard-columns">
+          <article class="card">
+            <div class="card-title"><div><span class="section-kicker">LATEST</span><h2>Recent activity</h2></div><button class="text-button" data-page="transactions">View all</button></div>
+            <div id="dashboard-activity" class="compact-list"></div>
+          </article>
+          <article class="card">
+            <div class="card-title"><div><span class="section-kicker">INVENTORY</span><h2>Low stock</h2></div><button class="text-button" data-page="items">View items</button></div>
+            <div id="dashboard-low-stock" class="compact-list"></div>
+          </article>
+        </div>
       </section>
 
       <section id="page-items" class="page" data-page-name="items">
-        <div class="page-heading"><div><small>INVENTORY</small><h1>Items</h1></div><button class="primary-small" data-action="new-item">+ Add Item</button></div>
-        <label class="search-card"><span>⌕</span><input id="item-search" type="search" placeholder="Search item, SKU or size" autocomplete="off" /></label>
-        <div class="filter-row"><button class="chip active" data-item-filter="all">All Items</button><button class="chip" data-item-filter="low">Low Stock</button></div>
-        <div id="items-list" class="list-stack"></div>
+        <div class="page-heading"><div><small>INVENTORY</small><h1>Items & Stock</h1><p>Manage product variants, rates and quantities.</p></div><button class="primary-small" data-action="new-item">+ Add Item</button></div>
+        <div class="toolbar-card">
+          <label class="search-card inline"><svg class="ui-icon"><use href="#icon-search" /></svg><input id="item-search" type="search" placeholder="Search item, SKU or size" autocomplete="off" /></label>
+          <div class="filter-row"><button class="chip active" data-item-filter="all">All Items</button><button class="chip" data-item-filter="low">Low Stock</button></div>
+        </div>
+        <div id="items-list" class="list-stack grid-list"></div>
       </section>
 
       <section id="page-parties" class="page" data-page-name="parties">
-        <div class="page-heading"><div><small>ACCOUNTS</small><h1>Parties</h1></div><button class="primary-small" data-action="new-party">+ Add Party</button></div>
-        <label class="search-card"><span>⌕</span><input id="party-search" type="search" placeholder="Search party or mobile" autocomplete="off" /></label>
-        <div class="filter-row"><button class="chip active" data-party-filter="all">All</button><button class="chip" data-party-filter="customer">Customers</button><button class="chip" data-party-filter="supplier">Suppliers</button></div>
-        <div id="parties-list" class="list-stack"></div>
+        <div class="page-heading"><div><small>ACCOUNTS</small><h1>Parties</h1><p>Customers, suppliers and outstanding balances.</p></div><button class="primary-small" data-action="new-party">+ Add Party</button></div>
+        <div class="toolbar-card">
+          <label class="search-card inline"><svg class="ui-icon"><use href="#icon-search" /></svg><input id="party-search" type="search" placeholder="Search party or mobile" autocomplete="off" /></label>
+          <div class="filter-row"><button class="chip active" data-party-filter="all">All</button><button class="chip" data-party-filter="customer">Customers</button><button class="chip" data-party-filter="supplier">Suppliers</button></div>
+        </div>
+        <div id="parties-list" class="list-stack grid-list"></div>
       </section>
 
       <section id="page-transactions" class="page" data-page-name="transactions">
-        <div class="page-heading"><div><small>HISTORY</small><h1>Transactions</h1></div><button class="primary-small" data-page="sale">+ New Sale</button></div>
-        <label class="search-card"><span>⌕</span><input id="transaction-search" type="search" placeholder="Search invoice or party" autocomplete="off" /></label>
-        <div class="filter-row"><button class="chip active" data-transaction-filter="all">All</button><button class="chip" data-transaction-filter="sale">Sales</button><button class="chip" data-transaction-filter="purchase">Purchases</button></div>
-        <div id="transactions-list" class="list-stack"></div>
+        <div class="page-heading"><div><small>HISTORY</small><h1>Transactions</h1><p>Search every sale, purchase and account entry.</p></div><button class="primary-small" data-page="sale">+ New Sale</button></div>
+        <div class="toolbar-card">
+          <label class="search-card inline"><svg class="ui-icon"><use href="#icon-search" /></svg><input id="transaction-search" type="search" placeholder="Search invoice or party" autocomplete="off" /></label>
+          <div class="filter-row"><button class="chip active" data-transaction-filter="all">All</button><button class="chip" data-transaction-filter="sale">Sales</button><button class="chip" data-transaction-filter="purchase">Purchases</button></div>
+        </div>
+        <div id="transactions-list" class="list-stack grid-list"></div>
+      </section>
+
+      <section id="page-reports" class="page" data-page-name="reports">
+        <div class="page-heading"><div><small>BUSINESS INTELLIGENCE</small><h1>Reports</h1><p>Sales, purchase, returns, tax and stock in one view.</p></div><button class="icon-button" data-action="refresh-reports" aria-label="Refresh Reports"><svg class="ui-icon"><use href="#icon-refresh" /></svg></button></div>
+
+        <article class="report-filter-card card">
+          <div class="report-filter-copy"><span class="section-kicker">REPORT PERIOD</span><h2 id="report-period-title">This Month</h2><p>Choose a preset or set your own date range.</p></div>
+          <div class="report-presets" role="group" aria-label="Report period presets">
+            <button class="chip" data-report-preset="today">Today</button>
+            <button class="chip active" data-report-preset="month">This Month</button>
+            <button class="chip" data-report-preset="last-month">Last Month</button>
+            <button class="chip" data-report-preset="year">This Year</button>
+          </div>
+          <div class="report-date-grid">
+            <label>From<input id="report-from" type="date" /></label>
+            <label>To<input id="report-to" type="date" /></label>
+            <button id="load-report" class="primary-small" type="button">Generate Report</button>
+          </div>
+        </article>
+
+        <div id="report-status" class="report-status" role="status" aria-live="polite">Loading report…</div>
+        <div id="report-content" class="hidden">
+          <div class="report-kpi-grid">
+            <article class="report-kpi sales"><span class="report-kpi-icon"><svg class="ui-icon"><use href="#icon-sale" /></svg></span><div><small>Net Sales</small><strong id="report-net-sales">₹0.00</strong><p id="report-sales-meta">0 bills</p></div></article>
+            <article class="report-kpi purchases"><span class="report-kpi-icon"><svg class="ui-icon"><use href="#icon-order" /></svg></span><div><small>Net Purchases</small><strong id="report-net-purchases">₹0.00</strong><p id="report-purchases-meta">0 entries</p></div></article>
+            <article class="report-kpi margin"><span class="report-kpi-icon">M</span><div><small>Margin Estimate</small><strong id="report-margin">₹0.00</strong><p>Net sales minus net purchases</p></div></article>
+            <article class="report-kpi stock"><span class="report-kpi-icon"><svg class="ui-icon"><use href="#icon-items" /></svg></span><div><small>Stock Value</small><strong id="report-stock">₹0.00</strong><p>At purchase rate</p></div></article>
+          </div>
+
+          <div class="report-layout">
+            <article class="card performance-card">
+              <div class="card-title"><div><span class="section-kicker">PERFORMANCE</span><h2>Sales vs purchases</h2></div><span id="report-range-label" class="soft-badge">Selected period</span></div>
+              <div class="performance-bars">
+                <div class="performance-row"><div><span>Net Sales</span><strong id="report-bar-sales-value">₹0.00</strong></div><div class="bar-track"><i id="report-sales-bar"></i></div></div>
+                <div class="performance-row purchase"><div><span>Net Purchases</span><strong id="report-bar-purchases-value">₹0.00</strong></div><div class="bar-track"><i id="report-purchases-bar"></i></div></div>
+              </div>
+              <div class="report-detail-grid">
+                <div><small>Sale Returns</small><strong id="report-sale-returns">₹0.00</strong></div>
+                <div><small>Purchase Returns</small><strong id="report-purchase-returns">₹0.00</strong></div>
+                <div><small>Net Tax Movement</small><strong id="report-tax">₹0.00</strong></div>
+                <div><small>Sales Due</small><strong id="report-sales-due">₹0.00</strong></div>
+              </div>
+            </article>
+
+            <article class="card top-items-card">
+              <div class="card-title"><div><span class="section-kicker">BEST SELLERS</span><h2>Top items</h2></div></div>
+              <div id="report-top-items" class="ranked-list"></div>
+            </article>
+          </div>
+
+          <article class="card export-card">
+            <div class="card-title"><div><span class="section-kicker">DOWNLOAD</span><h2>Export business data</h2><p>CSV files open in Excel and other spreadsheet apps.</p></div></div>
+            <div class="export-grid">
+              <button data-export-path="/api/export/sales.csv" data-export-name="kirana-sales.csv"><svg class="ui-icon"><use href="#icon-download" /></svg><span><b>Sales</b><small>All invoice lines</small></span></button>
+              <button data-export-path="/api/export/purchases.csv" data-export-name="kirana-purchases.csv"><svg class="ui-icon"><use href="#icon-download" /></svg><span><b>Purchases</b><small>All invoice lines</small></span></button>
+              <button data-export-path="/api/export/items.csv" data-export-name="kirana-items.csv"><svg class="ui-icon"><use href="#icon-download" /></svg><span><b>Items</b><small>Rates and stock</small></span></button>
+              <button data-export-path="/api/export/parties.csv" data-export-name="kirana-parties.csv"><svg class="ui-icon"><use href="#icon-download" /></svg><span><b>Parties</b><small>Balances and contacts</small></span></button>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section id="page-sale" class="page" data-page-name="sale">
         <div class="page-heading sticky-heading">
-          <button class="back-button" data-page="home">‹</button>
+          <button class="back-button" data-page="home" aria-label="Back to Home">‹</button>
           <div><small>BILLING</small><h1>New Sale</h1></div>
-          <button class="text-button" data-action="clear-sale">Clear</button>
+          <button class="text-button danger-text" data-action="clear-sale">Clear</button>
         </div>
+        <article class="billing-intro"><span class="billing-intro-icon"><svg class="ui-icon"><use href="#icon-sale" /></svg></span><div><strong>Create a Sale</strong><small>All new transactions stay on Credit until payment is recorded.</small></div></article>
         <article class="card form-card">
           <div class="form-grid two">
             <label>Customer<select id="sale-party"><option value="">Cash / Walk-in Customer</option></select></label>
             <label>Date<input id="sale-date" type="date" /></label>
           </div>
-          <label>Search Item<input id="sale-item-search" type="search" placeholder="Type product name or SKU" autocomplete="off" /></label>
+          <label>Search Item<input id="sale-item-search" type="search" placeholder="Type product name, SKU or size" autocomplete="off" /></label>
           <div id="sale-item-results" class="search-results hidden"></div>
         </article>
         <div id="sale-lines" class="sale-lines"></div>
@@ -114,7 +223,7 @@
           <div><span>Tax</span><strong id="sale-tax">₹0.00</strong></div>
           <div class="grand-total"><span>Total</span><strong id="sale-total">₹0.00</strong></div>
           <div class="form-grid two">
-            <label>Payment<select id="sale-payment-mode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank</option><option value="card">Card</option><option value="credit">Credit</option></select></label>
+            <label>Payment<select id="sale-payment-mode"><option value="credit">Credit</option><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank</option><option value="card">Card</option></select></label>
             <label>Paid Amount<input id="sale-paid" type="number" min="0" step="0.01" value="0" /></label>
           </div>
           <label>Notes<textarea id="sale-notes" rows="2" placeholder="Optional notes"></textarea></label>
@@ -123,16 +232,16 @@
       </section>
 
       <section id="page-orders" class="page" data-page-name="orders">
-        <div class="page-heading"><div><small>CUSTOMERS</small><h1>Orders</h1></div><button class="text-button" data-action="refresh-orders">Refresh</button></div>
+        <div class="page-heading"><div><small>CUSTOMERS</small><h1>Orders</h1><p>Review requests received from the customer app.</p></div><button class="icon-button" data-action="refresh-orders" aria-label="Refresh Orders"><svg class="ui-icon"><use href="#icon-refresh" /></svg></button></div>
         <article class="card info-card">
-          <small>Customer ordering link</small>
+          <span class="section-kicker">CUSTOMER ORDERING LINK</span>
           <div class="copy-row"><input id="customer-link" readonly /><button data-action="copy-customer-link">Copy</button></div>
         </article>
         <div id="orders-list" class="list-stack"></div>
       </section>
 
       <section id="page-settings" class="page" data-page-name="settings">
-        <div class="page-heading"><div><small>BUSINESS</small><h1>Settings</h1></div></div>
+        <div class="page-heading"><div><small>BUSINESS</small><h1>Settings</h1><p>Business profile and owner app preferences.</p></div></div>
         <form id="business-form" class="card form-card">
           <label>Business Name<input name="name" required /></label>
           <div class="form-grid two">
@@ -144,39 +253,43 @@
           <label>Invoice Prefix<input name="invoice_prefix" maxlength="8" /></label>
           <button class="primary-wide" type="submit">Save Business Settings</button>
         </form>
-        <article class="card">
-          <div class="menu-list">
-            <button data-page="orders"><span>🛒</span><div><b>Customer Orders</b><small>View orders and customer ordering link</small></div><i>›</i></button>
-            <button data-action="open-customer-link"><span>🔗</span><div><b>Open Customer App</b><small>Test the customer ordering page</small></div><i>›</i></button>
-            <button data-action="logout"><span>↪</span><div><b>Logout</b><small>Sign out of the owner app</small></div><i>›</i></button>
-          </div>
+        <article class="card menu-list settings-list">
+          <button data-page="orders"><span><svg class="ui-icon"><use href="#icon-order" /></svg></span><div><b>Customer Orders</b><small>Orders and customer ordering link</small></div><i>›</i></button>
+          <button data-action="open-customer-link"><span><svg class="ui-icon"><use href="#icon-party" /></svg></span><div><b>Open Customer App</b><small>Preview the ordering experience</small></div><i>›</i></button>
+          <button class="danger-row" data-action="logout"><span>↪</span><div><b>Logout</b><small>Sign out of this owner session</small></div><i>›</i></button>
         </article>
       </section>
 
       <section id="page-menu" class="page" data-page-name="menu">
-        <div class="page-heading"><div><small>ALL FEATURES</small><h1>Menu</h1></div></div>
+        <article class="menu-hero">
+          <span class="section-kicker">ALL FEATURES</span>
+          <h1>Business Menu</h1>
+          <p>Every tool in Kirana Software, organised in one place.</p>
+        </article>
+        <div class="section-heading"><div><span class="section-kicker">MY BUSINESS</span><h2>Operations & reports</h2></div></div>
         <article class="card menu-list">
-          <button data-page="sale"><span>₹</span><div><b>New Sale</b><small>Create a customer bill</small></div><i>›</i></button>
-          <button data-page="transactions"><span>▤</span><div><b>Transactions</b><small>Sales and purchase history</small></div><i>›</i></button>
-          <button data-page="items"><span>□</span><div><b>Items & Stock</b><small>Products, rates and stock</small></div><i>›</i></button>
-          <button data-page="parties"><span>👥</span><div><b>Parties</b><small>Customers and suppliers</small></div><i>›</i></button>
-          <button data-page="orders"><span>🛒</span><div><b>Customer Orders</b><small>Online customer requests</small></div><i>›</i></button>
-          <button data-page="settings"><span>⚙</span><div><b>Settings</b><small>Business profile and account</small></div><i>›</i></button>
+          <button data-page="sale"><span><svg class="ui-icon"><use href="#icon-sale" /></svg></span><div><b>New Sale</b><small>Create a customer bill</small></div><i>›</i></button>
+          <button data-page="reports"><span><svg class="ui-icon"><use href="#icon-report" /></svg></span><div><b>Reports</b><small>Sales, purchase, stock and profitability</small></div><i>›</i></button>
+          <button data-page="transactions"><span><svg class="ui-icon"><use href="#icon-transaction" /></svg></span><div><b>Transactions</b><small>Sale, purchase and account history</small></div><i>›</i></button>
+          <button data-page="items"><span><svg class="ui-icon"><use href="#icon-items" /></svg></span><div><b>Items & Stock</b><small>Products, variants, rates and quantity</small></div><i>›</i></button>
+          <button data-page="parties"><span><svg class="ui-icon"><use href="#icon-party" /></svg></span><div><b>Parties</b><small>Customers, suppliers and balances</small></div><i>›</i></button>
+          <button data-page="orders"><span><svg class="ui-icon"><use href="#icon-order" /></svg></span><div><b>Customer Orders</b><small>Online customer requests</small></div><i>›</i></button>
+          <button data-page="settings"><span><svg class="ui-icon"><use href="#icon-settings" /></svg></span><div><b>Settings</b><small>Business profile and account</small></div><i>›</i></button>
         </article>
       </section>
     </main>
 
     <nav class="bottom-nav" aria-label="Main navigation">
-      <button class="active" data-page="home"><span>⌂</span><b>HOME</b></button>
-      <button data-page="dashboard"><span>▥</span><b>DASHBOARD</b></button>
-      <button data-page="items"><span>□</span><b>ITEMS</b></button>
-      <button data-page="menu"><span>☰</span><b>MENU</b></button>
+      <button class="active" data-page="home"><svg class="ui-icon"><use href="#icon-home" /></svg><b>HOME</b></button>
+      <button data-page="dashboard"><svg class="ui-icon"><use href="#icon-dashboard" /></svg><b>DASHBOARD</b></button>
+      <button data-page="items"><svg class="ui-icon"><use href="#icon-items" /></svg><b>ITEMS</b></button>
+      <button data-page="menu"><svg class="ui-icon"><use href="#icon-menu" /></svg><b>MENU</b></button>
     </nav>
   </div>
 
   <div id="modal-backdrop" class="modal-backdrop hidden">
     <section id="item-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="item-modal-title">
-      <header><div><small>INVENTORY</small><h2 id="item-modal-title">Add Item</h2></div><button data-action="close-modal">×</button></header>
+      <header><div><small>INVENTORY</small><h2 id="item-modal-title">Add Item</h2></div><button data-action="close-modal" aria-label="Close">×</button></header>
       <form id="item-form" class="modal-body">
         <input type="hidden" name="id" />
         <label>Item Name<input name="name" required /></label>
@@ -199,7 +312,7 @@
     </section>
 
     <section id="party-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="party-modal-title">
-      <header><div><small>ACCOUNT</small><h2 id="party-modal-title">Add Party</h2></div><button data-action="close-modal">×</button></header>
+      <header><div><small>ACCOUNT</small><h2 id="party-modal-title">Add Party</h2></div><button data-action="close-modal" aria-label="Close">×</button></header>
       <form id="party-form" class="modal-body">
         <input type="hidden" name="id" />
         <label>Party Name<input name="name" required /></label>

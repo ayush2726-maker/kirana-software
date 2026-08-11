@@ -7,31 +7,31 @@ import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "148"
+VERSION = "173"
 
 SMART_PATCH = r'''
 <style id="kirana-smart-hard-style">
-#kirana-smart-fixed{position:fixed;right:14px;top:72px;z-index:2147483000;display:flex;gap:7px;pointer-events:auto}
+#kirana-smart-fixed{display:none!important}
 #kirana-smart-fixed a{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;text-decoration:none;background:#eef8fe;border:1px solid #d5e2e9;box-shadow:0 4px 14px rgba(26,74,104,.16);font-size:21px;color:#17354b}
 #kirana-smart-fixed a[data-kirana-quick-direct]{background:#fff7d8}
-.kirana-smart-menu-row{display:flex!important;align-items:center!important;width:100%!important;min-height:74px!important;padding:14px 12px!important;border:0!important;border-bottom:1px solid #e3e8eb!important;background:#fff!important;text-decoration:none!important;color:#263545!important;gap:14px!important;text-align:left!important}
-.kirana-smart-menu-row .ks-icon{font-size:28px;min-width:42px;text-align:center}
-.kirana-smart-menu-row .ks-copy{display:flex;flex-direction:column;min-width:0;flex:1}
-.kirana-smart-menu-row b{font-size:17px;line-height:1.25}
-.kirana-smart-menu-row small{font-size:13px;line-height:1.25;color:#7b8791;margin-top:3px}
-.kirana-smart-menu-row .ks-next{font-size:28px;color:#0784bd}
-@media(max-width:700px){#kirana-smart-fixed{top:70px;right:12px}}
+.kirana-smart-menu-row{display:grid!important;grid-template-columns:44px minmax(0,1fr) 20px!important;align-items:center!important;width:100%!important;min-height:72px!important;padding:11px 12px!important;border:0!important;border-radius:13px!important;background:#fff!important;text-decoration:none!important;color:#172033!important;gap:11px!important;text-align:left!important}
+.kirana-smart-menu-row:hover{background:#f7f9fd!important}
+.kirana-smart-menu-row .ks-icon{display:grid!important;place-items:center!important;width:42px!important;height:42px!important;border-radius:13px!important;background:#eff6ff!important;color:#2563eb!important;font-size:20px!important;min-width:0!important;text-align:center!important}
+.kirana-smart-menu-row .ks-copy{display:grid!important;min-width:0!important;gap:2px!important}
+.kirana-smart-menu-row b{overflow:hidden!important;font-size:14px!important;line-height:1.3!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.kirana-smart-menu-row small{overflow:hidden!important;font-size:10px!important;line-height:1.3!important;color:#667085!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.kirana-smart-menu-row .ks-next{font-size:20px!important;color:#98a2b3!important}
 </style>
 <script id="kirana-smart-hard-nav">
 (function(){
   'use strict';
-  if(window.__kiranaSmartHard148)return;
-  window.__kiranaSmartHard148=true;
+  if(window.__kiranaSmartHard173)return;
+  window.__kiranaSmartHard173=true;
 
   var routes={
-    quick:'/owner/quick-bill?direct=148',
-    photo:'/owner/smart-tools?direct=148#photo',
-    barcode:'/owner/smart-tools?direct=148#barcode'
+    quick:'/owner/quick-bill?direct=173',
+    photo:'/owner/smart-tools?direct=173#photo',
+    barcode:'/owner/smart-tools?direct=173#barcode'
   };
 
   function go(kind){
@@ -125,23 +125,23 @@ def _inject(page: str) -> str:
 
 _prev_native_html = native_owner.native_owner_html
 
-def native_owner_html_148() -> str:
+def native_owner_html_173() -> str:
     return _inject(_prev_native_html())
 
-native_owner.native_owner_html = native_owner_html_148
+native_owner.native_owner_html = native_owner_html_173
 
 
 _prev_final_html = final_owner.final_owner_html
 
-def final_owner_html_148() -> str:
+def final_owner_html_173() -> str:
     return _inject(_prev_final_html())
 
-final_owner.final_owner_html = final_owner_html_148
+final_owner.final_owner_html = final_owner_html_173
 
 
 _prev_stable_page = stable_owner.stable_owner_page
 
-def stable_owner_page_148(token: str) -> HTMLResponse:
+def stable_owner_page_173(token: str) -> HTMLResponse:
     original = _prev_stable_page(token)
     page = _inject(original.body.decode("utf-8"))
     headers = {k: v for k, v in original.headers.items() if k.lower() not in {"content-length", "content-type", "set-cookie"}}
@@ -152,4 +152,4 @@ def stable_owner_page_148(token: str) -> HTMLResponse:
     response.headers["X-Kirana-Smart-Hard-Fix"] = VERSION
     return response
 
-stable_owner.stable_owner_page = stable_owner_page_148
+stable_owner.stable_owner_page = stable_owner_page_173
