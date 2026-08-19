@@ -111,7 +111,7 @@ def deduped_customer_catalog(customer: dict[str, Any] = Depends(customer_user)) 
             """
             SELECT id,name,size,unit,category,gst_rate,sale_price,stock
             FROM items
-            WHERE business_id=?
+            WHERE business_id=? AND COALESCE(archived_at,'')=''
             ORDER BY name,size,id
             """,
             (customer["business_id"],),

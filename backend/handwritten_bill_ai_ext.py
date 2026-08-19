@@ -254,7 +254,7 @@ async def handwritten_bill_ai_reader(request: Request, call_next):
             item_rows = [
                 dict(row)
                 for row in conn.execute(
-                    "SELECT * FROM items WHERE business_id=? ORDER BY name,size,id",
+                    "SELECT * FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size,id",
                     (int(session["business_id"]),),
                 ).fetchall()
             ]

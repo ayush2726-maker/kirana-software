@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  if (window.__kiranaItemMergeDeleteV134) return;
-  window.__kiranaItemMergeDeleteV134 = true;
+  if (window.__kiranaItemMergeDeleteV177) return;
+  window.__kiranaItemMergeDeleteV177 = true;
 
   var busy = false;
   var sheetState = null;
@@ -78,9 +78,9 @@
   }
 
   function injectStyle() {
-    if (one('#item-merge-delete-v134-style')) return;
+    if (one('#item-merge-delete-v177-style')) return;
     var style = document.createElement('style');
-    style.id = 'item-merge-delete-v134-style';
+    style.id = 'item-merge-delete-v177-style';
     style.textContent =
       '.item-merge-delete-wrap{padding:0 20px 24px;background:#fff}' +
       '.item-merge-delete-button{width:100%;border:1px solid #e6a7b5;border-radius:13px;background:#fff4f6;color:#c93658;padding:13px 15px;font-size:15px;font-weight:900;touch-action:manipulation}' +
@@ -92,7 +92,8 @@
       '.item-merge-source{border-radius:14px;background:#f4f8fa;padding:13px;margin-bottom:12px}.item-merge-source b,.item-merge-source span{display:block}.item-merge-source span{margin-top:5px;color:#65737e}' +
       '.item-merge-warning{border-radius:12px;background:#fff5df;color:#765700;padding:11px 12px;font-size:13px;font-weight:800;line-height:1.45;margin-bottom:12px}' +
       '.item-merge-choice{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto 22px;gap:10px;align-items:center;border:1px solid #d8e4ea;border-radius:14px;background:#fff;padding:14px 12px;margin:9px 0;text-align:left;color:#22333f}.item-merge-choice b,.item-merge-choice small{display:block}.item-merge-choice small{margin-top:4px;color:#74828c}.item-merge-choice strong{color:#087fbd;white-space:nowrap}.item-merge-choice i{font-style:normal;font-size:25px;color:#81909b}' +
-      '.item-merge-cancel,.item-merge-confirm-empty{width:100%;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:900;margin-top:10px}.item-merge-cancel{background:#edf3f6;color:#344550}.item-merge-confirm-empty{background:#d83c5d;color:#fff}.item-merge-sheet button:disabled{opacity:.55}';
+      '.item-merge-cancel,.item-merge-confirm-empty,.item-archive-only,.item-zero-remove{width:100%;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:900;margin-top:10px}.item-merge-cancel{background:#edf3f6;color:#344550}.item-merge-confirm-empty,.item-zero-remove{background:#d83c5d;color:#fff}.item-archive-only{background:#e7f5fb;color:#087fbd}' +
+      '.archived-items-button{white-space:nowrap}.archived-item-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid #dde7ec;border-radius:14px;padding:12px;margin:9px 0}.archived-item-row b,.archived-item-row small{display:block}.archived-item-row small{color:#71808a;margin-top:4px}.archived-item-row button{border:0;border-radius:11px;background:#087fbd;color:#fff;padding:10px 13px;font-weight:900}.archived-empty{text-align:center;color:#71808a;padding:28px 10px}.item-merge-sheet button:disabled{opacity:.55}';
     document.head.appendChild(style);
   }
 
@@ -103,6 +104,7 @@
   }
 
   function decorate() {
+    decorateArchivedButton();
     var overlay = one('#item-history-overlay');
     if (!overlay || overlay.classList.contains('hidden')) return;
     var summary = one('.item-history-summary', overlay);
@@ -124,9 +126,24 @@
     wrap.className = 'item-merge-delete-wrap';
     wrap.setAttribute('data-for-item-id', String(itemId));
     wrap.innerHTML =
-      '<button type="button" class="item-merge-delete-button" data-delete-item-size="' + itemId + '">Delete This Size / Batch</button>' +
-      '<small class="item-merge-delete-note">Sirf ye size delete hoga. Doosre sizes aur purane bills safe rahenge.</small>';
+      '<button type="button" class="item-merge-delete-button" data-delete-item-size="' + itemId + '">Archive / Remove This Size</button>' +
+      '<small class="item-merge-delete-note">Historical bills stay safe. Billed sizes are archived; unused sizes may be permanently deleted.</small>';
     summary.insertAdjacentElement('afterend', wrap);
+  }
+
+  function decorateArchivedButton() {
+    if (one('#archived-items-button')) return;
+    var heading = one('#page-items .page-heading');
+    if (!heading) return;
+    var button = document.createElement('button');
+    button.id = 'archived-items-button';
+    button.type = 'button';
+    button.className = 'secondary-small archived-items-button';
+    button.setAttribute('data-open-archived-items', '');
+    button.textContent = 'Archived';
+    var actions = one('.bulk-heading-actions', heading);
+    if (actions) actions.insertBefore(button, actions.firstChild);
+    else heading.appendChild(button);
   }
 
   function closeSheet() {
@@ -144,28 +161,28 @@
     sheet.id = 'item-merge-delete-sheet';
     sheet.className = 'item-merge-sheet';
 
-    var choices = '';
-    if (Math.abs(sourceStock) > 0.00005) {
-      choices = siblings.map(function (item) {
+    var hasStock = Math.abs(sourceStock) > 0.00005;
+    var choices =
+      '<button type="button" class="item-archive-only" data-archive-only>Archive / Hide — Keep Stock</button>';
+    if (hasStock) {
+      choices += '<button type="button" class="item-zero-remove" data-zero-remove>Set Stock 0 &amp; Remove</button>';
+      if (siblings.length) choices += '<b>Or transfer stock to another size</b>' + siblings.map(function (item) {
         var newStock = Number(item.stock || 0) + sourceStock;
         return '<button type="button" class="item-merge-choice" data-merge-target-id="' + Number(item.id) + '">' +
           '<span><b>' + esc(label(item)) + '</b><small>Current stock ' + esc(qty(item.stock)) + ' ' + esc(item.unit || '') + '</small></span>' +
           '<strong>New ' + esc(qty(newStock)) + '</strong><i>›</i></button>';
       }).join('');
     } else {
-      choices = '<button type="button" class="item-merge-confirm-empty" data-confirm-empty-delete>Delete Permanently</button>';
+      choices += '<button type="button" class="item-merge-confirm-empty" data-confirm-empty-delete>Remove This Size</button>';
     }
 
-    var warning = Math.abs(sourceStock) > 0.00005
-      ? qty(sourceStock) + ' stock selected size me merge hoga, fir ' + label(source) + ' delete hoga.'
-      : 'Is size ka stock 0 hai. Sirf ye size permanently delete hoga.';
+    var warning = 'Historical bills will never be deleted. A billed size will be archived and hidden from New Sale, Purchase and the Customer App.';
 
     sheet.innerHTML =
       '<section class="item-merge-panel">' +
-        '<div class="item-merge-head"><div><small>DELETE SIZE / BATCH</small><h2>' + esc(source.name || 'Item') + '</h2></div><button type="button" class="item-merge-close" data-close-delete-sheet>×</button></div>' +
-        '<div class="item-merge-source"><b>Delete: ' + esc(label(source)) + '</b><span>Stock ' + esc(qty(sourceStock)) + ' ' + esc(source.unit || '') + '</span></div>' +
+        '<div class="item-merge-head"><div><small>ARCHIVE / REMOVE SIZE</small><h2>' + esc(source.name || 'Item') + '</h2></div><button type="button" class="item-merge-close" data-close-delete-sheet>×</button></div>' +
+        '<div class="item-merge-source"><b>Selected: ' + esc(label(source)) + '</b><span>Stock ' + esc(qty(sourceStock)) + ' ' + esc(source.unit || '') + '</span></div>' +
         '<div class="item-merge-warning">' + esc(warning) + '</div>' +
-        (Math.abs(sourceStock) > 0.00005 ? '<b>Stock kis size me merge karna hai?</b>' : '') +
         choices +
         '<button type="button" class="item-merge-cancel" data-close-delete-sheet>Cancel</button>' +
       '</section>';
@@ -179,15 +196,12 @@
     button.disabled = true;
     button.textContent = 'Checking...';
     try {
-      var items = await api('/api/items?limit=5000');
+      var items = await api('/api/items?limit=2000');
       var source = (items || []).find(function (item) { return Number(item.id) === Number(itemId); });
       if (!source) throw new Error('Item not found');
       var siblings = (items || []).filter(function (item) {
         return Number(item.id) !== Number(itemId) && clean(item.name) === clean(source.name);
       });
-      if (Math.abs(Number(source.stock || 0)) > 0.00005 && !siblings.length) {
-        throw new Error('Is size me stock hai, lekin same product ka doosra size nahi mila.');
-      }
       openSheet(source, siblings);
     } catch (error) {
       busy = false;
@@ -202,7 +216,7 @@
     all('#item-merge-delete-sheet button').forEach(function (button) { button.disabled = on; });
   }
 
-  async function performDelete(targetItemId) {
+  async function performDelete(targetItemId, stockAction, forceArchive) {
     if (!sheetState || busy) return;
     busy = true;
     setSheetBusy(true);
@@ -210,14 +224,85 @@
       var source = sheetState.source;
       var result = await api('/api/items/' + Number(source.id) + '/merge-delete', {
         method: 'POST',
-        body: { target_item_id: targetItemId ? Number(targetItemId) : null }
+        body: {
+          target_item_id: targetItemId ? Number(targetItemId) : null,
+          stock_action: stockAction || (targetItemId ? 'transfer' : 'keep'),
+          force_archive: Boolean(forceArchive)
+        }
       });
-      toast(result.merged_into_id ? 'Size delete ho gaya. Naya stock ' + qty(result.target_stock) + ' hai.' : 'Size delete ho gaya.');
+      var message = result.archived
+        ? 'Size archived. It is now hidden from new bills and the Customer App.'
+        : 'Unused size permanently deleted.';
+      if (result.merged_into_id) message += ' Target stock is now ' + qty(result.target_stock) + '.';
+      toast(message);
       closeSheet();
-      window.setTimeout(function () { window.location.replace('/?page=items&stable=134'); }, 450);
+      window.setTimeout(function () { window.location.replace('/?page=items&stable=177'); }, 450);
     } catch (error) {
       busy = false;
       setSheetBusy(false);
+      toast(error.message, true);
+    }
+  }
+
+  function closeArchivedItems() {
+    var sheet = one('#archived-items-sheet');
+    if (sheet) sheet.remove();
+  }
+
+  async function openArchivedItems() {
+    closeArchivedItems();
+    var sheet = document.createElement('div');
+    sheet.id = 'archived-items-sheet';
+    sheet.className = 'item-merge-sheet';
+    sheet.innerHTML =
+      '<section class="item-merge-panel">' +
+        '<div class="item-merge-head"><div><small>HIDDEN FROM BILLING</small><h2>Archived Items</h2></div><button type="button" class="item-merge-close" data-close-archived-items>×</button></div>' +
+        '<div id="archived-items-list" class="archived-empty">Loading…</div>' +
+      '</section>';
+    document.body.appendChild(sheet);
+    try {
+      var items = await api('/api/items/archived?limit=2000');
+      var list = one('#archived-items-list');
+      if (!list) return;
+      if (!items || !items.length) {
+        list.className = 'archived-empty';
+        list.textContent = 'No archived items';
+        return;
+      }
+      list.className = '';
+      list.innerHTML = items.map(function (item) {
+        return '<article class="archived-item-row">' +
+          '<div><b>' + esc(item.name || 'Item') + ' · ' + esc(label(item)) + '</b>' +
+          '<small>Stock ' + esc(qty(item.stock)) + ' ' + esc(item.unit || '') +
+          (item.archived_reason ? ' · ' + esc(item.archived_reason) : '') + '</small></div>' +
+          '<button type="button" data-restore-item-id="' + Number(item.id) + '">Restore</button>' +
+        '</article>';
+      }).join('');
+    } catch (error) {
+      var failed = one('#archived-items-list');
+      if (failed) failed.textContent = error.message || 'Archived items could not be loaded';
+      toast(error.message, true);
+    }
+  }
+
+  async function restoreArchivedItem(itemId, button) {
+    if (!itemId || button.disabled) return;
+    var oldText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Restoring…';
+    try {
+      await api('/api/items/' + itemId + '/restore', { method: 'POST' });
+      var row = button.closest('.archived-item-row');
+      if (row) row.remove();
+      var list = one('#archived-items-list');
+      if (list && !one('.archived-item-row', list)) {
+        list.className = 'archived-empty';
+        list.textContent = 'No archived items';
+      }
+      toast('Item restored. It is available in billing again.');
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = oldText;
       toast(error.message, true);
     }
   }
@@ -237,7 +322,23 @@
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      performDelete(Number(target.getAttribute('data-merge-target-id')));
+      performDelete(Number(target.getAttribute('data-merge-target-id')), 'transfer', false);
+      return;
+    }
+
+    if (event.target.closest('[data-archive-only]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      performDelete(null, 'keep', true);
+      return;
+    }
+
+    if (event.target.closest('[data-zero-remove]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      performDelete(null, 'zero', false);
       return;
     }
 
@@ -245,7 +346,30 @@
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      performDelete(null);
+      performDelete(null, 'keep', false);
+      return;
+    }
+
+    var archivedButton = event.target.closest('[data-open-archived-items]');
+    if (archivedButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      openArchivedItems();
+      return;
+    }
+
+    var restoreButton = event.target.closest('[data-restore-item-id]');
+    if (restoreButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      restoreArchivedItem(Number(restoreButton.getAttribute('data-restore-item-id')), restoreButton);
+      return;
+    }
+
+    if (event.target.closest('[data-close-archived-items]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeArchivedItems();
       return;
     }
 
@@ -258,6 +382,8 @@
 
     var sheet = event.target.closest('#item-merge-delete-sheet');
     if (sheet && event.target === sheet) closeSheet();
+    var archivedSheet = event.target.closest('#archived-items-sheet');
+    if (archivedSheet && event.target === archivedSheet) closeArchivedItems();
   }, true);
 
   function schedule() {

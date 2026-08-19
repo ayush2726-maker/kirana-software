@@ -318,7 +318,7 @@ async def photo_bill_ocr(
     bid = int(user["business_id"])
     with db() as conn:
         items = [dict(row) for row in conn.execute(
-            "SELECT id,name,size,unit,barcode,gst_rate,purchase_price,sale_price FROM items WHERE business_id=? ORDER BY name,size",
+            "SELECT id,name,size,unit,barcode,gst_rate,purchase_price,sale_price FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size",
             (bid,),
         ).fetchall()]
         parties = [dict(row) for row in conn.execute(

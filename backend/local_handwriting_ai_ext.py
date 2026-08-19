@@ -78,7 +78,7 @@ def _learn_aliases(conn, business_id: int, rows: list[dict[str, Any]]) -> int:
     _ensure_learning_table(conn)
     valid_ids = {
         int(row["id"])
-        for row in conn.execute("SELECT id FROM items WHERE business_id=?", (business_id,)).fetchall()
+        for row in conn.execute("SELECT id FROM items WHERE business_id=? AND COALESCE(archived_at,'')=''", (business_id,)).fetchall()
     }
     learned = 0
     for row in rows[:100]:
@@ -428,7 +428,7 @@ def _local_extract(raw: bytes, business_id: int) -> dict[str, Any]:
         items = [
             dict(row)
             for row in conn.execute(
-                "SELECT * FROM items WHERE business_id=? ORDER BY name,size,id",
+                "SELECT * FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size,id",
                 (business_id,),
             ).fetchall()
         ]

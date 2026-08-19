@@ -84,6 +84,8 @@ import backend.item_history_ext  # noqa: F401
 import backend.bill_edit_ext  # noqa: F401
 # Resolves old imported bill lines to the correct size and supports stock-merge deletion.
 import backend.item_variant_stock_fix_ext  # noqa: F401
+# Archives billed/ordered variants instead of breaking historical transactions.
+import backend.item_archive_ext  # noqa: F401
 # Makes each Sale/Purchase row inside Item Details open and edit its complete bill.
 import backend.item_history_open_fix_ext  # noqa: F401
 # Adds a delete action that can merge unused size stock into another size.

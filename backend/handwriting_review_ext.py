@@ -50,7 +50,7 @@ def _legacy_review_rows(raw: bytes, items: list[dict[str, Any]], bill_type: str)
 def _extract_review(raw: bytes, business_id: int, bill_type: str) -> dict[str, Any]:
     with db() as conn:
         items = [dict(row) for row in conn.execute(
-            "SELECT * FROM items WHERE business_id=? ORDER BY name,size,id",
+            "SELECT * FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size,id",
             (business_id,),
         ).fetchall()]
         parties = [dict(row) for row in conn.execute(

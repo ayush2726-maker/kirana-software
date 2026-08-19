@@ -183,7 +183,7 @@ async def parse_quick_bill(request: Request):
         return JSONResponse({"detail": "Item note likhein, jaise: काबली 1kg"}, status_code=400)
     with db() as conn:
         items = [dict(row) for row in conn.execute(
-            "SELECT * FROM items WHERE business_id=? ORDER BY name,size,id",
+            "SELECT * FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size,id",
             (int(session["business_id"]),),
         ).fetchall()]
     rows = _parse_note(text, items, bill_type)

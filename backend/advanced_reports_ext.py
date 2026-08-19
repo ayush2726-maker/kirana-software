@@ -334,7 +334,7 @@ def _cash_flow(conn: Any, bid: int, start: str, end: str) -> tuple[list[dict[str
 
 
 def _balance_sheet(conn: Any, bid: int, start: str, end: str) -> tuple[list[dict[str, str]], list[dict[str, Any]], list[dict[str, Any]], str]:
-    stock = _scalar(conn, "SELECT COALESCE(SUM(stock*purchase_price),0) FROM items WHERE business_id=?", (bid,))
+    stock = _scalar(conn, "SELECT COALESCE(SUM(stock*purchase_price),0) FROM items WHERE business_id=? AND COALESCE(archived_at,'')=''", (bid,))
     receivable = _scalar(conn, "SELECT COALESCE(SUM(due),0) FROM sales WHERE business_id=? AND invoice_date<=?", (bid, end))
     payable = _scalar(conn, "SELECT COALESCE(SUM(due),0) FROM purchases WHERE business_id=? AND invoice_date<=?", (bid, end))
     accounts = _scalar(conn, "SELECT COALESCE(SUM(balance),0) FROM accounts WHERE business_id=?", (bid,))
@@ -558,7 +558,7 @@ def _stock_report(conn: Any, bid: int, mode: str, start: str, end: str) -> tuple
         totals = [{"label": "Movements", "value": len(rows), "format": "number"}, {"label": "Net Qty", "value": _sum(rows, "qty"), "format": "number"}]
         return columns, rows, totals, "No rows appear until this movement type is recorded in stock history."
     if mode == "category_stock":
-        rows = _dicts(conn.execute("SELECT COALESCE(NULLIF(category,''),'Uncategorised') AS category,COUNT(*) AS items,ROUND(SUM(stock),3) AS stock_qty,ROUND(SUM(stock*purchase_price),2) AS stock_value FROM items WHERE business_id=? GROUP BY COALESCE(NULLIF(category,''),'Uncategorised') ORDER BY stock_value DESC", (bid,)).fetchall())
+        rows = _dicts(conn.execute("SELECT COALESCE(NULLIF(category,''),'Uncategorised') AS category,COUNT(*) AS items,ROUND(SUM(stock),3) AS stock_qty,ROUND(SUM(stock*purchase_price),2) AS stock_value FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' GROUP BY COALESCE(NULLIF(category,''),'Uncategorised') ORDER BY stock_value DESC", (bid,)).fetchall())
         columns = _columns(("category", "Category", "text"), ("items", "Items", "number"), ("stock_qty", "Stock Qty", "number"), ("stock_value", "Stock Value", "money"))
         totals = [{"label": "Categories", "value": len(rows), "format": "number"}, {"label": "Stock Value", "value": _sum(rows, "stock_value"), "format": "money"}]
         return columns, rows, totals, ""
@@ -614,7 +614,7 @@ def _stock_report(conn: Any, bid: int, mode: str, start: str, end: str) -> tuple
         columns = _columns(("item_name", "Item", "text"), ("size", "Size", "text"), ("gross_value", "Gross", "money"), ("allocated_discount", "Discount", "money"), ("net_value", "Net", "money"))
         totals = [{"label": "Allocated Discount", "value": _sum(rows, "allocated_discount"), "format": "money"}, {"label": "Net Value", "value": _sum(rows, "net_value"), "format": "money"}]
         return columns, rows, totals, "Bill-level discounts are allocated proportionally across item lines."
-    rows = _dicts(conn.execute("SELECT name,size,sku,barcode,category,unit,stock,sale_price FROM items WHERE business_id=? ORDER BY name,size", (bid,)).fetchall())
+    rows = _dicts(conn.execute("SELECT name,size,sku,barcode,category,unit,stock,sale_price FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size", (bid,)).fetchall())
     columns = _columns(("name", "Item", "text"), ("size", "Size", "text"), ("sku", "SKU / Serial", "text"), ("barcode", "Barcode", "text"), ("category", "Category", "text"), ("stock", "Stock", "number"), ("sale_price", "Sale Rate", "money"))
     totals = [{"label": "Items", "value": len(rows), "format": "number"}]
     return columns, rows, totals, ""

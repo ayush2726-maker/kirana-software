@@ -122,7 +122,7 @@ def _extract(raw: bytes, business_id: int, bill_type: str) -> dict[str, Any]:
         items = [
             dict(row)
             for row in conn.execute(
-                "SELECT * FROM items WHERE business_id=? ORDER BY name,size,id",
+                "SELECT * FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size,id",
                 (business_id,),
             ).fetchall()
         ]

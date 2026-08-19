@@ -108,7 +108,7 @@ async def quick_bill_voice_parse(request:Request):
  try:
   p=await request.json();text=str(p.get('text') or '');bill_type=str(p.get('bill_type') or 'sale').lower();bill_type=bill_type if bill_type in {'sale','purchase'} else 'sale';bid=int(session['business_id'])
   with db() as conn:
-   items=[dict(r) for r in conn.execute('SELECT * FROM items WHERE business_id=? ORDER BY name,size,id',(bid,)).fetchall()];rows=_voice_rows(text,items,bill_type,conn,bid)
+   items=[dict(r) for r in conn.execute("SELECT * FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size,id",(bid,)).fetchall()];rows=_voice_rows(text,items,bill_type,conn,bid)
   return JSONResponse({'ok':True,'items':rows,'heard':text,'version':VERSION})
  except Exception as exc:return JSONResponse({'detail':f'Voice parse failed: {exc}'},status_code=400)
 

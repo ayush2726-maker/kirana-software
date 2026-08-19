@@ -9,7 +9,7 @@ from backend.app import app, current_user, db, now_iso, today_iso
 import backend.bill_edit_ext as bill_edit
 
 
-VERSION = "134"
+VERSION = "177"
 MAX_DELETE_ITEMS = 2000
 _ORIGINAL_LOAD_BILL = bill_edit._load_bill
 _ORIGINAL_DETAIL = bill_edit._detail
@@ -181,7 +181,7 @@ def _repair_stale_bill_links(conn: Any, business_id: int, source: dict[str, Any]
 
 
 def _usage_exists(conn: Any, item_id: int) -> bool:
-    return bool(
+    billed = bool(
         conn.execute(
             """
             SELECT 1 FROM sale_items WHERE item_id=?
@@ -192,6 +192,25 @@ def _usage_exists(conn: Any, item_id: int) -> bool:
             (item_id, item_id, item_id),
         ).fetchone()
     )
+    if billed:
+        return True
+    order_table = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='order_items'"
+    ).fetchone()
+    if not order_table:
+        return False
+    return bool(conn.execute("SELECT 1 FROM order_items WHERE item_id=? LIMIT 1", (item_id,)).fetchone())
+
+
+def _stock_action(payload: dict[str, Any], target_item_id: int | None) -> str:
+    value = str(payload.get("stock_action") or "").strip().lower()
+    if not value:
+        return "transfer" if target_item_id else "keep"
+    if value not in {"keep", "zero", "transfer"}:
+        raise HTTPException(status_code=400, detail="Invalid stock action")
+    if value == "transfer" and not target_item_id:
+        raise HTTPException(status_code=400, detail="Select a target size for stock transfer")
+    return value
 
 
 def _delete_item(
@@ -199,33 +218,34 @@ def _delete_item(
     business_id: int,
     source: dict[str, Any],
     target_item_id: int | None,
+    *,
+    stock_action: str = "keep",
+    force_archive: bool = False,
 ) -> dict[str, Any]:
     item_id = int(source["id"])
     repaired_links = _repair_stale_bill_links(conn, business_id, source)
-    if _usage_exists(conn, item_id):
-        raise HTTPException(
-            status_code=409,
-            detail="Ye size abhi kisi asli purane bill me laga hua hai. Us bill ko kholkar item badalne ke baad delete karein.",
-        )
+    used_in_history = _usage_exists(conn, item_id)
 
     source_stock = round(float(source.get("stock") or 0), 4)
     target: dict[str, Any] | None = None
-    if target_item_id:
+    if stock_action == "transfer" and target_item_id:
         if target_item_id == item_id:
-            raise HTTPException(status_code=400, detail="Same item me merge nahi kar sakte")
+            raise HTTPException(status_code=400, detail="An item cannot be merged into itself")
         target_row = conn.execute(
-            "SELECT * FROM items WHERE id=? AND business_id=?",
+            "SELECT * FROM items WHERE id=? AND business_id=? AND COALESCE(archived_at,'')=''",
             (target_item_id, business_id),
         ).fetchone()
         if not target_row:
             raise HTTPException(status_code=404, detail="Merge target item not found")
         target = dict(target_row)
         if _clean(target.get("name")) != _clean(source.get("name")):
-            raise HTTPException(status_code=400, detail="Stock sirf same product ke dusre size me merge ho sakta hai")
-    elif abs(source_stock) > 0.00005:
+            raise HTTPException(status_code=400, detail="Stock can only be transferred to another size of the same product")
+    elif stock_action == "transfer":
+        raise HTTPException(status_code=400, detail="Select a target size for stock transfer")
+    elif stock_action == "keep" and abs(source_stock) > 0.00005 and not (used_in_history or force_archive):
         raise HTTPException(
             status_code=400,
-            detail="Is size me stock hai. Pehle same product ka target size select karein.",
+            detail="This size has stock. Choose stock transfer, set to zero, or archive only.",
         )
 
     if target and abs(source_stock) > 0.00005:
@@ -251,8 +271,60 @@ def _delete_item(
                 now_iso(),
             ),
         )
+        conn.execute(
+            "UPDATE items SET stock=0,updated_at=? WHERE id=? AND business_id=?",
+            (now_iso(), item_id, business_id),
+        )
+        conn.execute(
+            """
+            INSERT INTO stock_movements(
+                business_id,item_id,movement_date,kind,qty,reference_type,reference_id,note,created_at
+            ) VALUES(?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                business_id,
+                item_id,
+                today_iso(),
+                "adjustment",
+                -source_stock,
+                "item_merge",
+                int(target["id"]),
+                f"Stock transferred to {target.get('size') or target.get('unit') or target.get('name')}",
+                now_iso(),
+            ),
+        )
+    elif stock_action == "zero" and abs(source_stock) > 0.00005:
+        conn.execute(
+            "UPDATE items SET stock=0,updated_at=? WHERE id=? AND business_id=?",
+            (now_iso(), item_id, business_id),
+        )
+        conn.execute(
+            """
+            INSERT INTO stock_movements(
+                business_id,item_id,movement_date,kind,qty,reference_type,note,created_at
+            ) VALUES(?,?,?,?,?,?,?,?)
+            """,
+            (
+                business_id,
+                item_id,
+                today_iso(),
+                "adjustment",
+                -source_stock,
+                "item_archive",
+                "Stock set to zero while removing unused size",
+                now_iso(),
+            ),
+        )
 
-    conn.execute("DELETE FROM items WHERE id=? AND business_id=?", (item_id, business_id))
+    archived = used_in_history or force_archive
+    if archived:
+        reason = "Used in historical bill/order" if used_in_history else "Archived by owner"
+        conn.execute(
+            "UPDATE items SET archived_at=?,archived_reason=?,updated_at=? WHERE id=? AND business_id=?",
+            (now_iso(), reason, now_iso(), item_id, business_id),
+        )
+    else:
+        conn.execute("DELETE FROM items WHERE id=? AND business_id=?", (item_id, business_id))
     target_stock = None
     if target:
         refreshed = conn.execute(
@@ -262,8 +334,11 @@ def _delete_item(
         target_stock = float(refreshed["stock"]) if refreshed else None
 
     return {
-        "deleted": True,
-        "deleted_id": item_id,
+        "deleted": not archived,
+        "deleted_id": item_id if not archived else None,
+        "archived": archived,
+        "archived_id": item_id if archived else None,
+        "used_in_history": used_in_history,
         "merged_into_id": int(target["id"]) if target else None,
         "transferred_stock": source_stock if target else 0,
         "target_stock": target_stock,
@@ -293,6 +368,8 @@ async def merge_delete_unused_variant(
 
     payload = await _request_payload(request)
     target_item_id = _payload_target(payload)
+    stock_action = _stock_action(payload, target_item_id)
+    force_archive = bool(payload.get("force_archive"))
     business_id = int(user["business_id"])
     with db() as conn:
         source_row = conn.execute(
@@ -301,7 +378,14 @@ async def merge_delete_unused_variant(
         ).fetchone()
         if not source_row:
             raise HTTPException(status_code=404, detail="Item not found")
-        return _delete_item(conn, business_id, dict(source_row), target_item_id)
+        return _delete_item(
+            conn,
+            business_id,
+            dict(source_row),
+            target_item_id,
+            stock_action=stock_action,
+            force_archive=force_archive,
+        )
 
 
 @app.post("/api/items/bulk-delete")
@@ -331,7 +415,7 @@ async def bulk_delete_item_variants(
 
     business_id = int(user["business_id"])
     deleted_ids: list[int] = []
-    blocked: list[dict[str, Any]] = []
+    archived_items: list[dict[str, Any]] = []
     missing_ids: list[int] = []
     with db() as conn:
         for item_id in ids:
@@ -345,12 +429,16 @@ async def bulk_delete_item_variants(
             source = dict(source_row)
             _repair_stale_bill_links(conn, business_id, source)
             if _usage_exists(conn, item_id):
-                blocked.append(
+                conn.execute(
+                    "UPDATE items SET archived_at=?,archived_reason=?,updated_at=? WHERE id=? AND business_id=?",
+                    (now_iso(), "Used in historical bill/order", now_iso(), item_id, business_id),
+                )
+                archived_items.append(
                     {
                         "id": item_id,
                         "name": source.get("name") or "Item",
                         "size": source.get("size") or source.get("unit") or "",
-                        "reason": "Used in a bill",
+                        "reason": "Used in historical bill/order",
                     }
                 )
                 continue
@@ -360,7 +448,10 @@ async def bulk_delete_item_variants(
     return {
         "deleted": len(deleted_ids),
         "deleted_ids": deleted_ids,
-        "blocked": blocked,
+        "archived": len(archived_items),
+        "archived_ids": [int(item["id"]) for item in archived_items],
+        "archived_items": archived_items,
+        "blocked": [],
         "missing_ids": missing_ids,
     }
 

@@ -589,7 +589,7 @@ def customer_me(customer: dict[str, Any] = Depends(customer_user)) -> dict[str, 
 def customer_catalog(customer: dict[str, Any] = Depends(customer_user)) -> list[dict[str, Any]]:
     ensure_order_schema()
     with db() as conn:
-        item_ids = [int(r["id"]) for r in conn.execute("SELECT id FROM items WHERE business_id=? ORDER BY name,size", (customer["business_id"],)).fetchall()]
+        item_ids = [int(r["id"]) for r in conn.execute("SELECT id FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size", (customer["business_id"],)).fetchall()]
         return [recommended_rate(conn, customer["business_id"], customer["party_id"], item_id) for item_id in item_ids]
 
 

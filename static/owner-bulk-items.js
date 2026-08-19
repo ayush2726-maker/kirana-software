@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  if (window.__kiranaBulkItemsV134) return;
-  window.__kiranaBulkItemsV134 = true;
+  if (window.__kiranaBulkItemsV177) return;
+  window.__kiranaBulkItemsV177 = true;
 
   var selected = new Set();
   var bulkMode = false;
@@ -92,11 +92,11 @@
     if (filterRow) {
       filterRow.insertAdjacentHTML('afterend',
         '<section id="bulk-items-toolbar" class="bulk-toolbar hidden">' +
-          '<div><strong id="bulk-selected-count">0 items selected</strong><small>Har size / batch ko alag select karke edit ya delete karein</small></div>' +
+          '<div><strong id="bulk-selected-count">0 items selected</strong><small>Select each size or batch separately to edit, archive or remove it</small></div>' +
           '<div class="bulk-toolbar-actions">' +
             '<button type="button" data-bulk-action="select-visible">Select Visible</button>' +
             '<button type="button" data-bulk-action="edit" class="bulk-primary" disabled>Edit Selected</button>' +
-            '<button type="button" data-bulk-action="delete" class="bulk-danger" disabled>Delete</button>' +
+            '<button type="button" data-bulk-action="delete" class="bulk-danger" disabled>Archive / Remove</button>' +
             '<button type="button" data-bulk-action="done">Done</button>' +
           '</div>' +
         '</section>'
@@ -106,7 +106,7 @@
     document.body.insertAdjacentHTML('beforeend',
       '<section id="bulk-editor" class="bulk-editor hidden" aria-hidden="true">' +
         '<header><button type="button" data-bulk-action="close-editor" class="bulk-back">‹</button><div><small>INVENTORY</small><h2>Bulk Edit Items</h2></div><button id="bulk-save-top" type="button" data-bulk-action="save" class="bulk-save">Save All</button></header>' +
-        '<div class="bulk-editor-note">Har selected size / batch neeche alag dikh raha hai.</div>' +
+        '<div class="bulk-editor-note">Each selected size or batch is shown separately below.</div>' +
         '<main id="bulk-editor-list"></main>' +
         '<footer><button type="button" data-bulk-action="close-editor">Cancel</button><button type="button" data-bulk-action="save" class="bulk-save">Save All Changes</button></footer>' +
       '</section>' +
@@ -274,7 +274,7 @@
   async function openEditor() {
     if (!selected.size) return;
     try {
-      var items = await api('/api/items?limit=5000');
+      var items = await api('/api/items?limit=2000');
       var rows = items.filter(function (item) { return selected.has(Number(item.id)); });
       if (!rows.length) throw new Error('Selected sizes were not found');
       one('#bulk-editor-list').innerHTML = rows.map(editorRow).join('');
@@ -350,7 +350,7 @@
     try {
       var result = await api('/api/items/bulk-update', { method: 'POST', body: { items: items } });
       notify(result.updated + ' size / item updated');
-      setTimeout(function () { window.location.replace('/?page=items&stable=134'); }, 500);
+      setTimeout(function () { window.location.replace('/?page=items&stable=177'); }, 500);
     } catch (error) {
       buttons.forEach(function (button) {
         button.disabled = false;
@@ -363,23 +363,18 @@
   async function deleteSelected() {
     if (!selected.size) return;
     var count = selected.size;
-    if (!window.confirm('Delete ' + count + (count === 1 ? ' selected size / item?' : ' selected sizes / items?') + '\n\nSirf select ki hui size delete hogi, poora product nahi.')) return;
+    if (!window.confirm('Remove ' + count + (count === 1 ? ' selected size / item?' : ' selected sizes / items?') + '\n\nSizes used in bills will be archived and hidden. Never-used sizes will be permanently deleted. Historical bills stay safe.')) return;
     try {
       var result = await api('/api/items/bulk-delete', {
         method: 'POST',
         body: { ids: Array.from(selected) }
       });
-      var message = result.deleted + ' size / item deleted.';
-      if (result.blocked && result.blocked.length) {
-        var names = result.blocked.slice(0, 3).map(function (item) {
-          return (item.name || 'Item') + (item.size ? ' - ' + item.size : '');
-        }).join(', ');
-        message += ' Bill me use hone ki wajah se nahi delete hua: ' + names;
-      }
-      notify(message, Boolean(result.blocked && result.blocked.length && !result.deleted));
+      var message = (result.archived || 0) + ' billed size archived, ' + (result.deleted || 0) + ' unused size deleted.';
+      notify(message, false);
       (result.deleted_ids || []).forEach(function (id) { selected.delete(Number(id)); });
-      if (result.deleted) {
-        setTimeout(function () { window.location.replace('/?page=items&stable=134'); }, 700);
+      (result.archived_ids || []).forEach(function (id) { selected.delete(Number(id)); });
+      if (result.deleted || result.archived) {
+        setTimeout(function () { window.location.replace('/?page=items&stable=177'); }, 700);
       } else {
         enhanceCards();
         updateToolbar();

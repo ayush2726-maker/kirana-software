@@ -31,7 +31,7 @@ def all_catalog_groups(conn: Any, business_id: int) -> list[dict[str, Any]]:
         """
         SELECT id,name,size,unit,category,gst_rate,sale_price,mrp,stock
         FROM items
-        WHERE business_id=?
+        WHERE business_id=? AND COALESCE(archived_at,'')=''
         ORDER BY name,size,id
         """,
         (business_id,),

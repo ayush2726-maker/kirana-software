@@ -62,7 +62,7 @@ async def quick_bill_add_item(request: Request):
     bid = int(session["business_id"])
     with db() as conn:
         existing = conn.execute(
-            "SELECT * FROM items WHERE business_id=? AND lower(name)=lower(?) AND lower(COALESCE(size,''))=lower(?) LIMIT 1",
+            "SELECT * FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' AND lower(name)=lower(?) AND lower(COALESCE(size,''))=lower(?) LIMIT 1",
             (bid, name, size),
         ).fetchone()
         if existing:

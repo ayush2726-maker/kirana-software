@@ -128,7 +128,7 @@ def _item_rows(conn: Any, business_id: int) -> list[dict[str, Any]]:
         """
         SELECT id,name,size,unit,sku,stock,sale_price,purchase_price,gst_rate
         FROM items
-        WHERE business_id=?
+        WHERE business_id=? AND COALESCE(archived_at,'')=''
         ORDER BY name COLLATE NOCASE,size COLLATE NOCASE,id
         LIMIT 5000
         """,

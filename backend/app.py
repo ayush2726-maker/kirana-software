@@ -214,6 +214,8 @@ def init_db() -> None:
                 mrp REAL NOT NULL DEFAULT 0,
                 stock REAL NOT NULL DEFAULT 0,
                 min_stock REAL NOT NULL DEFAULT 0,
+                archived_at TEXT DEFAULT '',
+                archived_reason TEXT DEFAULT '',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 UNIQUE(business_id, sku)
@@ -425,8 +427,14 @@ def init_db() -> None:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
         ensure_column("items", "size", "TEXT DEFAULT ''")
+        ensure_column("items", "archived_at", "TEXT DEFAULT ''")
+        ensure_column("items", "archived_reason", "TEXT DEFAULT ''")
         ensure_column("sale_items", "size", "TEXT DEFAULT ''")
         ensure_column("purchase_items", "size", "TEXT DEFAULT ''")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_items_business_archived "
+            "ON items(business_id, archived_at)"
+        )
 
         # One-time-safe cleanup for imported item names such as
         # “Barik Souff 500 (बारिक सौंफ)”. The pack is stored separately so
@@ -734,9 +742,10 @@ def dashboard(user: dict[str, Any] = Depends(current_user)) -> dict[str, Any]:
         expenses_month = conn.execute("SELECT COALESCE(SUM(amount),0) FROM business_entries WHERE business_id=? AND entry_type='expense' AND entry_date>=?", (bid, month_start)).fetchone()[0]
         receivable = conn.execute("SELECT COALESCE(SUM(balance),0) FROM parties WHERE business_id=? AND type IN ('customer','both') AND balance>0", (bid,)).fetchone()[0]
         payable = conn.execute("SELECT COALESCE(SUM(balance),0) FROM parties WHERE business_id=? AND type IN ('supplier','both') AND balance>0", (bid,)).fetchone()[0]
-        low_stock = conn.execute("SELECT COUNT(*) FROM items WHERE business_id=? AND stock<=min_stock", (bid,)).fetchone()[0]
-        item_count = conn.execute("SELECT COUNT(*) FROM items WHERE business_id=?", (bid,)).fetchone()[0]
-        stock_value = conn.execute("SELECT COALESCE(SUM(stock*purchase_price),0) FROM items WHERE business_id=?", (bid,)).fetchone()[0]
+        active_item = "COALESCE(archived_at,'')=''"
+        low_stock = conn.execute(f"SELECT COUNT(*) FROM items WHERE business_id=? AND {active_item} AND stock<=min_stock", (bid,)).fetchone()[0]
+        item_count = conn.execute(f"SELECT COUNT(*) FROM items WHERE business_id=? AND {active_item}", (bid,)).fetchone()[0]
+        stock_value = conn.execute(f"SELECT COALESCE(SUM(stock*purchase_price),0) FROM items WHERE business_id=? AND {active_item}", (bid,)).fetchone()[0]
         accounts = [dict(r) for r in conn.execute("SELECT * FROM accounts WHERE business_id=? ORDER BY is_default DESC,name", (bid,)).fetchall()]
         bank_balance = round(sum(float(r["balance"]) for r in accounts if r["account_type"] == "bank"), 2)
         cash_balance = round(sum(float(r["balance"]) for r in accounts if r["account_type"] == "cash"), 2)
@@ -744,7 +753,7 @@ def dashboard(user: dict[str, Any] = Depends(current_user)) -> dict[str, Any]:
         recent_purchases = [dict(r) for r in conn.execute("SELECT id,invoice_no,party_name,invoice_date,total,paid,due,'purchase' AS kind FROM purchases WHERE business_id=? ORDER BY id DESC LIMIT 8", (bid,)).fetchall()]
         recent_entries = [dict(r) for r in conn.execute("SELECT id,title AS invoice_no,COALESCE(party_name,title) AS party_name,entry_date AS invoice_date,amount AS total,amount AS paid,0 AS due,entry_type AS kind,status FROM business_entries WHERE business_id=? ORDER BY id DESC LIMIT 10", (bid,)).fetchall()]
         activity = sorted(recent_sales + recent_purchases + recent_entries, key=lambda x: (x.get("invoice_date", ""), x.get("id", 0)), reverse=True)[:12]
-        low_items = [dict(r) for r in conn.execute("SELECT id,name,stock,min_stock,unit FROM items WHERE business_id=? AND stock<=min_stock ORDER BY stock ASC LIMIT 5", (bid,)).fetchall()]
+        low_items = [dict(r) for r in conn.execute(f"SELECT id,name,stock,min_stock,unit FROM items WHERE business_id=? AND {active_item} AND stock<=min_stock ORDER BY stock ASC LIMIT 5", (bid,)).fetchall()]
         open_docs = conn.execute("SELECT COUNT(*),COALESCE(SUM(amount),0) FROM documents WHERE business_id=? AND status NOT IN ('closed','cancelled')", (bid,)).fetchone()
         trend_rows = conn.execute("SELECT substr(invoice_date,1,7) AS ym,COALESCE(SUM(total),0) AS amount FROM sales WHERE business_id=? AND invoice_date>=? GROUP BY ym ORDER BY ym", (bid, trend_start.isoformat())).fetchall()
     trend_map = {r["ym"]: round(r["amount"],2) for r in trend_rows}
@@ -769,12 +778,15 @@ def dashboard(user: dict[str, Any] = Depends(current_user)) -> dict[str, Any]:
 def list_items(
     q: str = "",
     low_stock: bool = False,
+    include_archived: bool = False,
     limit: int = Query(default=500, ge=1, le=2000),
     user: dict[str, Any] = Depends(current_user),
 ) -> list[dict[str, Any]]:
     bid = user["business_id"]
     sql = "SELECT * FROM items WHERE business_id=?"
     args: list[Any] = [bid]
+    if not include_archived:
+        sql += " AND COALESCE(archived_at,'')=''"
     if q:
         sql += " AND (name LIKE ? OR size LIKE ? OR sku LIKE ? OR barcode LIKE ? OR category LIKE ?)"
         like = f"%{q}%"
@@ -1664,7 +1676,7 @@ def report_summary(
         purchases = conn.execute("SELECT COALESCE(SUM(total),0),COALESCE(SUM(tax),0),COALESCE(SUM(due),0),COUNT(*) FROM purchases WHERE business_id=? AND invoice_date BETWEEN ? AND ?", (bid, start, end)).fetchone()
         sale_returns = conn.execute("SELECT COALESCE(SUM(total),0),COALESCE(SUM(tax),0),COUNT(*) FROM returns WHERE business_id=? AND kind='sale_return' AND return_date BETWEEN ? AND ?", (bid, start, end)).fetchone()
         purchase_returns = conn.execute("SELECT COALESCE(SUM(total),0),COALESCE(SUM(tax),0),COUNT(*) FROM returns WHERE business_id=? AND kind='purchase_return' AND return_date BETWEEN ? AND ?", (bid, start, end)).fetchone()
-        stock_value = conn.execute("SELECT COALESCE(SUM(stock*purchase_price),0) FROM items WHERE business_id=?", (bid,)).fetchone()[0]
+        stock_value = conn.execute("SELECT COALESCE(SUM(stock*purchase_price),0) FROM items WHERE business_id=? AND COALESCE(archived_at,'')=''", (bid,)).fetchone()[0]
         top_items = [dict(r) for r in conn.execute(
             """
             SELECT si.item_name,COALESCE(si.size,'') AS size,SUM(si.qty) AS qty,SUM(si.line_total) AS amount
@@ -1692,7 +1704,7 @@ def report_summary(
 def export_items(user: dict[str, Any] = Depends(current_user)):
     from fastapi.responses import StreamingResponse
     with db() as conn:
-        rows = [dict(r) for r in conn.execute("SELECT name,sku,barcode,category,unit,size,hsn,gst_rate,purchase_price,sale_price,mrp,stock,min_stock FROM items WHERE business_id=? ORDER BY name", (user["business_id"],)).fetchall()]
+        rows = [dict(r) for r in conn.execute("SELECT name,sku,barcode,category,unit,size,hsn,gst_rate,purchase_price,sale_price,mrp,stock,min_stock FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name", (user["business_id"],)).fetchall()]
     output = io.StringIO()
     if rows:
         writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()))

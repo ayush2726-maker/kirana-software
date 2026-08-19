@@ -232,7 +232,7 @@ async def quick_canvas_fix(request: Request, call_next):
         text = str(data.get("text") or "")
         bid = int(s["business_id"])
         with db() as conn:
-            items = [dict(r) for r in conn.execute("SELECT * FROM items WHERE business_id=? ORDER BY name,size,id", (bid,)).fetchall()]
+            items = [dict(r) for r in conn.execute("SELECT * FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size,id", (bid,)).fetchall()]
             rows = _parse_text(text, items, bill_type, conn, bid)
         return JSONResponse({"items": rows, "detected_lines": len(rows), "version": VERSION})
 
@@ -253,7 +253,7 @@ async def quick_canvas_fix(request: Request, call_next):
         try:
             ai_rows = _gemini_canvas_extract(raw)
             with db() as conn:
-                items = [dict(r) for r in conn.execute("SELECT * FROM items WHERE business_id=? ORDER BY name,size,id", (bid,)).fetchall()]
+                items = [dict(r) for r in conn.execute("SELECT * FROM items WHERE business_id=? AND COALESCE(archived_at,'')='' ORDER BY name,size,id", (bid,)).fetchall()]
                 rows = _rows_from_ai(ai_rows, items, bill_type, conn, bid)
             return JSONResponse({"items": rows, "detected_lines": len(rows), "version": VERSION, "reader": "gemini-quickwrite+local-catalog"})
         except Exception as e:
