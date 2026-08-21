@@ -160,6 +160,14 @@ def test_archive_ui_explains_safe_mixed_remove_behavior():
     assert "Archived Items" in script
     assert "New Sale, Purchase and the Customer App" in script
     assert "data-restore-item-id" in script
+    assert "data-toggle-delete-item-id" in script
+    assert "data-archive-selected" in script
+    assert "data-zero-selected" in script
+    assert "refreshItemsInPlace" in script
+    assert "window.location.replace('/?page=items" not in script
+    assert "same unit only (kg with kg, pcs with pcs)" in script
     assert "limit=5000" not in script
     assert "Sizes used in bills will be archived and hidden" in bulk_script
+    assert "refreshItemsInPlace" in bulk_script
+    assert "window.location.replace('/?page=items" not in bulk_script
     assert "limit=5000" not in bulk_script
