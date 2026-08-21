@@ -1,0 +1,94 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "kirana software",
+      "intents": [
+        {
+          "name": "SelectCustomerIntent",
+          "slots": [{"name": "customer", "type": "AMAZON.SearchQuery"}],
+          "samples": [
+            "customer {customer}",
+            "{customer} customer select karo",
+            "{customer} ko select karo",
+            "customer ka naam {customer}"
+          ]
+        },
+        {
+          "name": "AddItemIntent",
+          "slots": [
+            {"name": "quantity", "type": "AMAZON.NUMBER"},
+            {"name": "item", "type": "AMAZON.SearchQuery"}
+          ],
+          "samples": [
+            "{item} add karo",
+            "{quantity} {item} add karo",
+            "item {item}",
+            "{quantity} {item}",
+            "bill mein {item} dalo",
+            "bill mein {quantity} {item} dalo"
+          ]
+        },
+        {
+          "name": "RemoveLastItemIntent",
+          "slots": [],
+          "samples": [
+            "last item hatao",
+            "pichla item hatao",
+            "last item remove karo"
+          ]
+        },
+        {
+          "name": "CompleteBillIntent",
+          "slots": [],
+          "samples": [
+            "bill bana do",
+            "bill complete karo",
+            "save bill",
+            "bill save karo",
+            "done"
+          ]
+        },
+        {
+          "name": "CheckRateIntent",
+          "slots": [{"name": "item", "type": "AMAZON.SearchQuery"}],
+          "samples": [
+            "{item} ka rate batao",
+            "rate of {item}",
+            "{item} kitne ka hai"
+          ]
+        },
+        {
+          "name": "CustomerBalanceIntent",
+          "slots": [{"name": "customer", "type": "AMAZON.SearchQuery"}],
+          "samples": [
+            "{customer} ka balance batao",
+            "balance of {customer}",
+            "{customer} ka kitna balance hai"
+          ]
+        },
+        {
+          "name": "TodaySalesIntent",
+          "slots": [],
+          "samples": [
+            "aaj ki sale batao",
+            "today sale",
+            "aaj kitni sale hui"
+          ]
+        },
+        {
+          "name": "CancelBillIntent",
+          "slots": [],
+          "samples": [
+            "current bill cancel karo",
+            "bill cancel karo",
+            "ye bill hatao"
+          ]
+        },
+        {"name": "AMAZON.HelpIntent", "samples": []},
+        {"name": "AMAZON.CancelIntent", "samples": []},
+        {"name": "AMAZON.StopIntent", "samples": []}
+      ],
+      "types": []
+    }
+  }
+}
