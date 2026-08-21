@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  if (window.__kiranaItemMergeDeleteV177) return;
-  window.__kiranaItemMergeDeleteV177 = true;
+  if (window.__kiranaItemMergeDeleteV178) return;
+  window.__kiranaItemMergeDeleteV178 = true;
 
   var busy = false;
   var sheetState = null;
@@ -78,9 +78,9 @@
   }
 
   function injectStyle() {
-    if (one('#item-merge-delete-v177-style')) return;
+    if (one('#item-merge-delete-v178-style')) return;
     var style = document.createElement('style');
-    style.id = 'item-merge-delete-v177-style';
+    style.id = 'item-merge-delete-v178-style';
     style.textContent =
       '.item-merge-delete-wrap{padding:0 20px 24px;background:#fff}' +
       '.item-merge-delete-button{width:100%;border:1px solid #e6a7b5;border-radius:13px;background:#fff4f6;color:#c93658;padding:13px 15px;font-size:15px;font-weight:900;touch-action:manipulation}' +
@@ -91,6 +91,9 @@
       '.item-merge-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:13px}.item-merge-head h2{margin:3px 0 0;font-size:22px}.item-merge-head small{color:#75828c;font-weight:800}.item-merge-close{width:42px;height:42px;border:0;border-radius:50%;background:#edf3f6;font-size:27px;color:#263742}' +
       '.item-merge-source{border-radius:14px;background:#f4f8fa;padding:13px;margin-bottom:12px}.item-merge-source b,.item-merge-source span{display:block}.item-merge-source span{margin-top:5px;color:#65737e}' +
       '.item-merge-warning{border-radius:12px;background:#fff5df;color:#765700;padding:11px 12px;font-size:13px;font-weight:800;line-height:1.45;margin-bottom:12px}' +
+      '.item-merge-select-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 8px}.item-merge-select-tools span{color:#65737e;font-size:13px;font-weight:800}.item-merge-select-tools div{display:flex;gap:7px}.item-merge-select-tools button{border:0;border-radius:9px;background:#e7f3fb;color:#087fbd;padding:8px 10px;font-size:12px;font-weight:900}' +
+      '.item-merge-select-row{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid #d8e4ea;border-radius:13px;background:#fff;padding:12px;margin:8px 0;text-align:left;color:#22333f}.item-merge-select-row.selected{border-color:#087fbd;background:#eef8fd;box-shadow:0 0 0 2px rgba(8,127,189,.08)}.item-merge-check{width:24px;height:24px;border:2px solid #aab8c1;border-radius:7px;display:grid;place-items:center;color:transparent;font-size:16px;font-weight:900}.item-merge-select-row.selected .item-merge-check{background:#087fbd;border-color:#087fbd;color:#fff}.item-merge-select-row b,.item-merge-select-row small{display:block}.item-merge-select-row small{margin-top:4px;color:#74828c}.item-merge-select-row strong{color:#344550;white-space:nowrap}' +
+      '.item-merge-action-title{display:block;margin:16px 2px 4px;color:#65737e;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.item-merge-unit-note{border-radius:11px;background:#f2f5f7;color:#65737e;padding:10px 11px;font-size:12px;font-weight:800;line-height:1.4;margin-top:10px}.item-merge-success{border-radius:12px;background:#e4f7ec;color:#17713a;padding:11px 12px;font-size:13px;font-weight:900;line-height:1.4;margin-bottom:10px}' +
       '.item-merge-choice{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto 22px;gap:10px;align-items:center;border:1px solid #d8e4ea;border-radius:14px;background:#fff;padding:14px 12px;margin:9px 0;text-align:left;color:#22333f}.item-merge-choice b,.item-merge-choice small{display:block}.item-merge-choice small{margin-top:4px;color:#74828c}.item-merge-choice strong{color:#087fbd;white-space:nowrap}.item-merge-choice i{font-style:normal;font-size:25px;color:#81909b}' +
       '.item-merge-cancel,.item-merge-confirm-empty,.item-archive-only,.item-zero-remove{width:100%;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:900;margin-top:10px}.item-merge-cancel{background:#edf3f6;color:#344550}.item-merge-confirm-empty,.item-zero-remove{background:#d83c5d;color:#fff}.item-archive-only{background:#e7f5fb;color:#087fbd}' +
       '.archived-items-button{white-space:nowrap}.archived-item-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid #dde7ec;border-radius:14px;padding:12px;margin:9px 0}.archived-item-row b,.archived-item-row small{display:block}.archived-item-row small{color:#71808a;margin-top:4px}.archived-item-row button{border:0;border-radius:11px;background:#087fbd;color:#fff;padding:10px 13px;font-weight:900}.archived-empty{text-align:center;color:#71808a;padding:28px 10px}.item-merge-sheet button:disabled{opacity:.55}';
@@ -126,8 +129,8 @@
     wrap.className = 'item-merge-delete-wrap';
     wrap.setAttribute('data-for-item-id', String(itemId));
     wrap.innerHTML =
-      '<button type="button" class="item-merge-delete-button" data-delete-item-size="' + itemId + '">Archive / Remove This Size</button>' +
-      '<small class="item-merge-delete-note">Historical bills stay safe. Billed sizes are archived; unused sizes may be permanently deleted.</small>';
+      '<button type="button" class="item-merge-delete-button" data-delete-item-size="' + itemId + '">Archive / Remove Sizes</button>' +
+      '<small class="item-merge-delete-note">Select one or multiple sizes together. Historical bills always stay safe.</small>';
     summary.insertAdjacentElement('afterend', wrap);
   }
 
@@ -146,47 +149,118 @@
     else heading.appendChild(button);
   }
 
+  function closeItemHistoryIfNeeded(state) {
+    if (!state || !state.openerRemoved) return;
+    if (window.KiranaItemHistory && typeof window.KiranaItemHistory.close === 'function') {
+      window.KiranaItemHistory.close();
+      return;
+    }
+    var overlay = one('#item-history-overlay');
+    if (overlay) overlay.classList.add('hidden');
+  }
+
   function closeSheet() {
     var sheet = one('#item-merge-delete-sheet');
     if (sheet) sheet.remove();
+    var oldState = sheetState;
     sheetState = null;
     busy = false;
+    closeItemHistoryIfNeeded(oldState);
+  }
+
+  function selectedSheetItems() {
+    if (!sheetState) return [];
+    return sheetState.items.filter(function (item) {
+      return sheetState.selectedIds.indexOf(Number(item.id)) !== -1;
+    });
+  }
+
+  function selectedUnit(items) {
+    var units = items.map(function (item) { return clean(item.unit); });
+    if (!units.length) return '';
+    return units.every(function (unit) { return unit === units[0]; }) ? units[0] : null;
+  }
+
+  function renderDeleteSheet() {
+    var sheet = one('#item-merge-delete-sheet');
+    if (!sheet || !sheetState) return;
+    var items = sheetState.items;
+    var selected = selectedSheetItems();
+    var selectedIds = selected.map(function (item) { return Number(item.id); });
+    var selectedStock = selected.reduce(function (sum, item) { return sum + Number(item.stock || 0); }, 0);
+    var hasStock = selected.some(function (item) { return Math.abs(Number(item.stock || 0)) > 0.00005; });
+    var unit = selectedUnit(selected);
+    var transferTargets = unit === null ? [] : items.filter(function (item) {
+      return selectedIds.indexOf(Number(item.id)) === -1 && clean(item.unit) === unit;
+    });
+    var success = sheetState.successMessage
+      ? '<div class="item-merge-success">' + esc(sheetState.successMessage) + '</div>'
+      : '';
+
+    var selection = items.length ?
+      '<div class="item-merge-select-tools"><span>' + selected.length + ' of ' + items.length + ' selected</span><div>' +
+        '<button type="button" data-select-all-delete-sizes>Select All</button>' +
+        '<button type="button" data-clear-delete-sizes>Clear</button>' +
+      '</div></div>' +
+      items.map(function (item) {
+        var isSelected = selectedIds.indexOf(Number(item.id)) !== -1;
+        return '<button type="button" class="item-merge-select-row' + (isSelected ? ' selected' : '') + '" data-toggle-delete-item-id="' + Number(item.id) + '" aria-pressed="' + (isSelected ? 'true' : 'false') + '">' +
+          '<span class="item-merge-check">✓</span>' +
+          '<span><b>' + esc(label(item)) + '</b><small>Sale ' + esc(qty(item.sale_price)) + ' · Stock ' + esc(qty(item.stock)) + ' ' + esc(item.unit || '') + '</small></span>' +
+          '<strong>' + esc(item.unit || '') + '</strong>' +
+        '</button>';
+      }).join('') : '<div class="archived-empty">No active sizes left for this product.</div>';
+
+    var choices = '';
+    if (selected.length) {
+      choices = '<span class="item-merge-action-title">Apply to ' + selected.length + (selected.length === 1 ? ' selected size' : ' selected sizes') + '</span>' +
+        '<button type="button" class="item-archive-only" data-archive-selected>Archive / Hide Selected — Keep Stock</button>';
+      if (hasStock) {
+        choices += '<button type="button" class="item-zero-remove" data-zero-selected>Set Selected Stock 0 &amp; Remove</button>';
+        if (transferTargets.length) {
+          choices += '<b class="item-merge-action-title">Or transfer selected stock to</b>' + transferTargets.map(function (item) {
+            var newStock = Number(item.stock || 0) + selectedStock;
+            return '<button type="button" class="item-merge-choice" data-merge-target-id="' + Number(item.id) + '">' +
+              '<span><b>' + esc(label(item)) + '</b><small>Current stock ' + esc(qty(item.stock)) + ' ' + esc(item.unit || '') + '</small></span>' +
+              '<strong>New ' + esc(qty(newStock)) + '</strong><i>›</i></button>';
+          }).join('');
+        } else if (unit === null) {
+          choices += '<div class="item-merge-unit-note">For stock transfer, select sizes having the same unit only (kg with kg, pcs with pcs).</div>';
+        }
+      } else {
+        choices += '<button type="button" class="item-merge-confirm-empty" data-remove-selected>Remove Selected Sizes</button>';
+      }
+    }
+
+    var warning = 'Historical bills will never be deleted. Billed sizes are archived and hidden from New Sale, Purchase and the Customer App.';
+    sheet.innerHTML =
+      '<section class="item-merge-panel">' +
+        '<div class="item-merge-head"><div><small>SELECT MULTIPLE SIZES</small><h2>' + esc(sheetState.productName || 'Item') + '</h2></div><button type="button" class="item-merge-close" data-close-delete-sheet>×</button></div>' +
+        success +
+        '<div class="item-merge-warning">' + esc(warning) + '</div>' +
+        selection + choices +
+        '<button type="button" class="item-merge-cancel" data-close-delete-sheet>' + (items.length ? 'Done' : 'Close') + '</button>' +
+      '</section>';
   }
 
   function openSheet(source, siblings) {
     closeSheet();
-    var sourceStock = Number(source.stock || 0);
-    sheetState = { source: source, siblings: siblings || [] };
+    var items = [source].concat(siblings || []).filter(function (item, index, rows) {
+      return rows.findIndex(function (candidate) { return Number(candidate.id) === Number(item.id); }) === index;
+    });
+    sheetState = {
+      productName: source.name || 'Item',
+      openerItemId: Number(source.id),
+      openerRemoved: false,
+      items: items,
+      selectedIds: [Number(source.id)],
+      successMessage: ''
+    };
     var sheet = document.createElement('div');
     sheet.id = 'item-merge-delete-sheet';
     sheet.className = 'item-merge-sheet';
-
-    var hasStock = Math.abs(sourceStock) > 0.00005;
-    var choices =
-      '<button type="button" class="item-archive-only" data-archive-only>Archive / Hide — Keep Stock</button>';
-    if (hasStock) {
-      choices += '<button type="button" class="item-zero-remove" data-zero-remove>Set Stock 0 &amp; Remove</button>';
-      if (siblings.length) choices += '<b>Or transfer stock to another size</b>' + siblings.map(function (item) {
-        var newStock = Number(item.stock || 0) + sourceStock;
-        return '<button type="button" class="item-merge-choice" data-merge-target-id="' + Number(item.id) + '">' +
-          '<span><b>' + esc(label(item)) + '</b><small>Current stock ' + esc(qty(item.stock)) + ' ' + esc(item.unit || '') + '</small></span>' +
-          '<strong>New ' + esc(qty(newStock)) + '</strong><i>›</i></button>';
-      }).join('');
-    } else {
-      choices += '<button type="button" class="item-merge-confirm-empty" data-confirm-empty-delete>Remove This Size</button>';
-    }
-
-    var warning = 'Historical bills will never be deleted. A billed size will be archived and hidden from New Sale, Purchase and the Customer App.';
-
-    sheet.innerHTML =
-      '<section class="item-merge-panel">' +
-        '<div class="item-merge-head"><div><small>ARCHIVE / REMOVE SIZE</small><h2>' + esc(source.name || 'Item') + '</h2></div><button type="button" class="item-merge-close" data-close-delete-sheet>×</button></div>' +
-        '<div class="item-merge-source"><b>Selected: ' + esc(label(source)) + '</b><span>Stock ' + esc(qty(sourceStock)) + ' ' + esc(source.unit || '') + '</span></div>' +
-        '<div class="item-merge-warning">' + esc(warning) + '</div>' +
-        choices +
-        '<button type="button" class="item-merge-cancel" data-close-delete-sheet>Cancel</button>' +
-      '</section>';
     document.body.appendChild(sheet);
+    renderDeleteSheet();
   }
 
   async function prepareDelete(itemId, button) {
@@ -216,30 +290,67 @@
     all('#item-merge-delete-sheet button').forEach(function (button) { button.disabled = on; });
   }
 
-  async function performDelete(targetItemId, stockAction, forceArchive) {
+  async function refreshItemsInPlace() {
+    if (typeof window.refreshMasterData === 'function') await window.refreshMasterData();
+    if (typeof window.renderItems === 'function') window.renderItems();
+  }
+
+  async function performSelected(targetItemId, stockAction, forceArchive) {
     if (!sheetState || busy) return;
+    var selected = selectedSheetItems();
+    if (!selected.length) {
+      toast('Select at least one size.', true);
+      return;
+    }
     busy = true;
     setSheetBusy(true);
+    var completedIds = [];
+    var archivedCount = 0;
+    var deletedCount = 0;
+    var transferred = 0;
     try {
-      var source = sheetState.source;
-      var result = await api('/api/items/' + Number(source.id) + '/merge-delete', {
-        method: 'POST',
-        body: {
-          target_item_id: targetItemId ? Number(targetItemId) : null,
-          stock_action: stockAction || (targetItemId ? 'transfer' : 'keep'),
-          force_archive: Boolean(forceArchive)
+      for (var index = 0; index < selected.length; index += 1) {
+        var source = selected[index];
+        var result = await api('/api/items/' + Number(source.id) + '/merge-delete', {
+          method: 'POST',
+          body: {
+            target_item_id: targetItemId ? Number(targetItemId) : null,
+            stock_action: stockAction || (targetItemId ? 'transfer' : 'keep'),
+            force_archive: Boolean(forceArchive)
+          }
+        });
+        completedIds.push(Number(source.id));
+        if (result.archived) archivedCount += 1;
+        else deletedCount += 1;
+        transferred += Math.abs(Number(result.transferred_stock || 0));
+        if (result.merged_into_id && result.target_stock != null) {
+          var targetItem = sheetState.items.find(function (item) {
+            return Number(item.id) === Number(result.merged_into_id);
+          });
+          if (targetItem) targetItem.stock = Number(result.target_stock);
         }
-      });
-      var message = result.archived
-        ? 'Size archived. It is now hidden from new bills and the Customer App.'
-        : 'Unused size permanently deleted.';
-      if (result.merged_into_id) message += ' Target stock is now ' + qty(result.target_stock) + '.';
-      toast(message);
-      closeSheet();
-      window.setTimeout(function () { window.location.replace('/?page=items&stable=177'); }, 450);
-    } catch (error) {
+      }
+      sheetState.openerRemoved = sheetState.openerRemoved || completedIds.indexOf(sheetState.openerItemId) !== -1;
+      sheetState.items = sheetState.items.filter(function (item) { return completedIds.indexOf(Number(item.id)) === -1; });
+      sheetState.selectedIds = [];
+      var parts = [];
+      if (archivedCount) parts.push(archivedCount + (archivedCount === 1 ? ' size archived' : ' sizes archived'));
+      if (deletedCount) parts.push(deletedCount + (deletedCount === 1 ? ' unused size deleted' : ' unused sizes deleted'));
+      if (targetItemId && transferred) parts.push('stock transferred');
+      sheetState.successMessage = parts.join(' · ') + '. You can select more sizes here.';
+      await refreshItemsInPlace();
       busy = false;
-      setSheetBusy(false);
+      renderDeleteSheet();
+      toast(parts.join(' · ') + '.');
+    } catch (error) {
+      if (completedIds.length && sheetState) {
+        sheetState.openerRemoved = sheetState.openerRemoved || completedIds.indexOf(sheetState.openerItemId) !== -1;
+        sheetState.items = sheetState.items.filter(function (item) { return completedIds.indexOf(Number(item.id)) === -1; });
+        sheetState.selectedIds = sheetState.selectedIds.filter(function (id) { return completedIds.indexOf(Number(id)) === -1; });
+        await refreshItemsInPlace().catch(function () {});
+      }
+      busy = false;
+      renderDeleteSheet();
       toast(error.message, true);
     }
   }
@@ -322,31 +433,71 @@
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      performDelete(Number(target.getAttribute('data-merge-target-id')), 'transfer', false);
+      performSelected(Number(target.getAttribute('data-merge-target-id')), 'transfer', false);
       return;
     }
 
-    if (event.target.closest('[data-archive-only]')) {
+    var sizeToggle = event.target.closest('[data-toggle-delete-item-id]');
+    if (sizeToggle) {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      performDelete(null, 'keep', true);
+      var toggledId = Number(sizeToggle.getAttribute('data-toggle-delete-item-id'));
+      var selectedIndex = sheetState ? sheetState.selectedIds.indexOf(toggledId) : -1;
+      if (sheetState) {
+        if (selectedIndex === -1) sheetState.selectedIds.push(toggledId);
+        else sheetState.selectedIds.splice(selectedIndex, 1);
+        sheetState.successMessage = '';
+        renderDeleteSheet();
+      }
       return;
     }
 
-    if (event.target.closest('[data-zero-remove]')) {
+    if (event.target.closest('[data-select-all-delete-sizes]')) {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      performDelete(null, 'zero', false);
+      if (sheetState) {
+        sheetState.selectedIds = sheetState.items.map(function (item) { return Number(item.id); });
+        sheetState.successMessage = '';
+        renderDeleteSheet();
+      }
       return;
     }
 
-    if (event.target.closest('[data-confirm-empty-delete]')) {
+    if (event.target.closest('[data-clear-delete-sizes]')) {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      performDelete(null, 'keep', false);
+      if (sheetState) {
+        sheetState.selectedIds = [];
+        sheetState.successMessage = '';
+        renderDeleteSheet();
+      }
+      return;
+    }
+
+    if (event.target.closest('[data-archive-selected]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      performSelected(null, 'keep', true);
+      return;
+    }
+
+    if (event.target.closest('[data-zero-selected]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      performSelected(null, 'zero', false);
+      return;
+    }
+
+    if (event.target.closest('[data-remove-selected]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      performSelected(null, 'keep', false);
       return;
     }
 

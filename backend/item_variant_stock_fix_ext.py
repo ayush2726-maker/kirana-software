@@ -9,7 +9,7 @@ from backend.app import app, current_user, db, now_iso, today_iso
 import backend.bill_edit_ext as bill_edit
 
 
-VERSION = "177"
+VERSION = "178"
 MAX_DELETE_ITEMS = 2000
 _ORIGINAL_LOAD_BILL = bill_edit._load_bill
 _ORIGINAL_DETAIL = bill_edit._detail

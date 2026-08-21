@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  if (window.__kiranaBulkItemsV177) return;
-  window.__kiranaBulkItemsV177 = true;
+  if (window.__kiranaBulkItemsV178) return;
+  window.__kiranaBulkItemsV178 = true;
 
   var selected = new Set();
   var bulkMode = false;
@@ -321,6 +321,13 @@
     return true;
   }
 
+  async function refreshItemsInPlace() {
+    if (typeof window.refreshMasterData === 'function') await window.refreshMasterData();
+    if (typeof window.renderItems === 'function') window.renderItems();
+    enhanceCards();
+    updateToolbar();
+  }
+
   async function saveBulkEdits() {
     var cards = all('#bulk-editor-list [data-bulk-edit-id]');
     if (!cards.length) return;
@@ -350,7 +357,12 @@
     try {
       var result = await api('/api/items/bulk-update', { method: 'POST', body: { items: items } });
       notify(result.updated + ' size / item updated');
-      setTimeout(function () { window.location.replace('/?page=items&stable=177'); }, 500);
+      buttons.forEach(function (button) {
+        button.disabled = false;
+        button.textContent = button.id === 'bulk-save-top' ? 'Save All' : 'Save All Changes';
+      });
+      closeEditor();
+      await refreshItemsInPlace();
     } catch (error) {
       buttons.forEach(function (button) {
         button.disabled = false;
@@ -373,12 +385,7 @@
       notify(message, false);
       (result.deleted_ids || []).forEach(function (id) { selected.delete(Number(id)); });
       (result.archived_ids || []).forEach(function (id) { selected.delete(Number(id)); });
-      if (result.deleted || result.archived) {
-        setTimeout(function () { window.location.replace('/?page=items&stable=177'); }, 700);
-      } else {
-        enhanceCards();
-        updateToolbar();
-      }
+      await refreshItemsInPlace();
     } catch (error) {
       notify(error.message, true);
     }
