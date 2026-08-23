@@ -57,3 +57,5 @@ async def privacy_policy_before_spa(request: Request, call_next):
 
 # Load hardening only after the Alexa skill and handlers are registered.
 import backend.alexa_hardening_ext  # noqa: F401,E402
+# Privacy-safe Railway audit trail for Alexa certification/runtime requests.
+import backend.alexa_audit_ext  # noqa: F401,E402
