@@ -5,10 +5,10 @@ from backend.app import app
 
 
 PRIVACY_POLICY_HTML = """<!doctype html>
-<html lang=\"en\">
+<html lang="en">
 <head>
-  <meta charset=\"utf-8\" />
-  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Kirana Software Privacy Policy</title>
   <style>
     body{font-family:Arial,sans-serif;max-width:860px;margin:40px auto;padding:0 20px;line-height:1.6;color:#172033}
@@ -17,7 +17,7 @@ PRIVACY_POLICY_HTML = """<!doctype html>
 </head>
 <body>
   <h1>Kirana Software Privacy Policy</h1>
-  <p class=\"muted\">Last updated: 21 August 2026</p>
+  <p class="muted">Last updated: 21 August 2026</p>
   <p>Kirana Software provides billing and shop-management features, including an Alexa voice interface for authorized shop users.</p>
   <h2>Information we process</h2>
   <p>When the Alexa skill is used, Kirana Software may process customer names, item names, quantities, prices, customer balances, sales totals, and other billing information already stored in the authorized Kirana Software account. Alexa request metadata may also be processed as needed to provide the requested voice action.</p>
@@ -53,3 +53,9 @@ async def privacy_policy_before_spa(request: Request, call_next):
     if request.method == "GET" and request.url.path.rstrip("/") == "/privacy-policy":
         return HTMLResponse(PRIVACY_POLICY_HTML, status_code=200)
     return await call_next(request)
+
+
+# Load hardening only after the Alexa skill and handlers are registered.
+import backend.alexa_hardening_ext  # noqa: F401,E402
+# Privacy-safe Railway audit trail for Alexa certification/runtime requests.
+import backend.alexa_audit_ext  # noqa: F401,E402
