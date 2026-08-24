@@ -17,17 +17,11 @@ def _safe_find_item(phrase: str) -> dict[str, Any] | None:
     if not name:
         return None
     with db() as conn:
-        rows = [
-            dict(r)
-            for r in conn.execute(
-                """
+        rows = [dict(r) for r in conn.execute("""
                 SELECT * FROM items
                 WHERE business_id=? AND COALESCE(archived_at,'')='' AND name LIKE ?
                 ORDER BY name,size LIMIT 100
-                """,
-                (bid, f"%{name}%"),
-            ).fetchall()
-        ]
+                """, (bid, f"%{name}%")).fetchall()]
     if not rows:
         return None
     name_cf = name.casefold()
@@ -47,11 +41,6 @@ def _request_id(handler_input) -> str:
 
 
 def _complete_bill_once(self, handler_input):
-    """Create at most one sale for an Alexa request ID.
-
-    Alexa can retry a request when a response is delayed. A unique request ID
-    marker prevents a retry from creating a second invoice/stock movement.
-    """
     attrs = alexa._attrs(handler_input)
     customer = attrs.get("customer")
     cart = attrs.get("cart") or []
@@ -62,89 +51,42 @@ def _complete_bill_once(self, handler_input):
 
     request_id = _request_id(handler_input)
     bid = alexa._business_id()
-
     with db() as conn:
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS alexa_request_receipts (
-                request_id TEXT PRIMARY KEY,
-                business_id INTEGER NOT NULL,
-                sale_id INTEGER,
-                invoice_no TEXT DEFAULT '',
-                total REAL NOT NULL DEFAULT 0,
+                request_id TEXT PRIMARY KEY, business_id INTEGER NOT NULL,
+                sale_id INTEGER, invoice_no TEXT DEFAULT '', total REAL NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
+            )""")
         if request_id:
-            previous = conn.execute(
-                "SELECT invoice_no,total FROM alexa_request_receipts WHERE request_id=? AND business_id=?",
-                (request_id, bid),
-            ).fetchone()
+            previous = conn.execute("SELECT invoice_no,total FROM alexa_request_receipts WHERE request_id=? AND business_id=?", (request_id, bid)).fetchone()
             if previous and previous["invoice_no"]:
                 attrs["cart"] = []
-                return alexa._speak(
-                    handler_input,
-                    f"Bill pehle hi ban chuka hai. Total {alexa._money(previous['total'])} rupaye. Bill number {previous['invoice_no']}.",
-                    end=True,
-                )
+                return alexa._speak(handler_input, f"Bill pehle hi ban chuka hai. Total {alexa._money(previous['total'])} rupaye. Bill number {previous['invoice_no']}.", end=True)
             try:
-                conn.execute(
-                    "INSERT INTO alexa_request_receipts(request_id,business_id) VALUES(?,?)",
-                    (request_id, bid),
-                )
+                conn.execute("INSERT INTO alexa_request_receipts(request_id,business_id) VALUES(?,?)", (request_id, bid))
             except sqlite3.IntegrityError:
-                previous = conn.execute(
-                    "SELECT invoice_no,total FROM alexa_request_receipts WHERE request_id=? AND business_id=?",
-                    (request_id, bid),
-                ).fetchone()
+                previous = conn.execute("SELECT invoice_no,total FROM alexa_request_receipts WHERE request_id=? AND business_id=?", (request_id, bid)).fetchone()
                 if previous and previous["invoice_no"]:
                     attrs["cart"] = []
-                    return alexa._speak(
-                        handler_input,
-                        f"Bill pehle hi ban chuka hai. Total {alexa._money(previous['total'])} rupaye. Bill number {previous['invoice_no']}.",
-                        end=True,
-                    )
+                    return alexa._speak(handler_input, f"Bill pehle hi ban chuka hai. Total {alexa._money(previous['total'])} rupaye. Bill number {previous['invoice_no']}.", end=True)
                 raise
 
-        payload = TransactionIn(
-            party_id=int(customer["id"]),
-            paid=0,
-            payment_mode="cash",
-            notes="Created by Alexa HTTPS",
-            items=[TxLineIn(**line) for line in cart],
-        )
+        payload = TransactionIn(party_id=int(customer["id"]), paid=0, payment_mode="cash", notes="Created by Alexa HTTPS", items=[TxLineIn(**line) for line in cart])
         sale = insert_sale(conn, bid, payload)
         if request_id:
-            conn.execute(
-                "UPDATE alexa_request_receipts SET sale_id=?,invoice_no=?,total=? WHERE request_id=?",
-                (sale.get("id"), sale.get("invoice_no", ""), float(sale.get("total") or 0), request_id),
-            )
+            conn.execute("UPDATE alexa_request_receipts SET sale_id=?,invoice_no=?,total=? WHERE request_id=?", (sale.get("id"), sale.get("invoice_no", ""), float(sale.get("total") or 0), request_id))
 
     attrs["cart"] = []
-    return alexa._speak(
-        handler_input,
-        f"Bill ban gaya. Total {alexa._money(sale.get('total'))} rupaye. Bill number {sale.get('invoice_no', '')}.",
-        end=True,
-    )
+    return alexa._speak(handler_input, f"Bill ban gaya. Total {alexa._money(sale.get('total'))} rupaye. Bill number {sale.get('invoice_no', '')}.", end=True)
 
 
 class _ManualTestAwareWebserviceHandler:
-    """Keep production verification strict while supporting Alexa Console Manual JSON.
-
-    The Developer Console signs Manual JSON requests, but users can paste an
-    old timestamp into the payload. For the known Console test identity only,
-    keep Alexa signature verification enabled while skipping timestamp age.
-    Real Alexa/device requests continue through the original strict handler.
-    """
+    """Keep production verification strict while supporting signed Console Manual JSON."""
 
     def __init__(self, strict_handler):
         self.strict_handler = strict_handler
-        self.manual_test_handler = WebserviceSkillHandler(
-            skill=alexa.sb.create(),
-            verify_signature=True,
-            verify_timestamp=False,
-        )
+        self.manual_test_handler = WebserviceSkillHandler(skill=alexa.sb.create(), verify_signature=True, verify_timestamp=False)
 
     @staticmethod
     def _is_console_manual_test(raw_body: str) -> bool:
@@ -157,32 +99,25 @@ class _ManualTestAwareWebserviceHandler:
         user_id = str(((session.get("user") or {}).get("userId")) or ((context_system.get("user") or {}).get("userId")) or "")
         device_id = str(((context_system.get("device") or {}).get("deviceId")) or "")
         request_id = str(((payload.get("request") or {}).get("requestId")) or "")
-        return (
-            user_id == "amzn1.ask.account.test-user"
-            and device_id == "test-device"
-            and request_id.startswith("amzn1.echo-api.request.")
-        )
+        return user_id == "amzn1.ask.account.test-user" and device_id == "test-device" and request_id.startswith("amzn1.echo-api.request.")
+
+    @staticmethod
+    def _as_json_text(result):
+        # ASK SDK versions can return either serialized JSON text or a dict.
+        # alexa_https_endpoint expects JSON text, so normalize without double encoding.
+        if isinstance(result, (str, bytes, bytearray)):
+            return result
+        return json.dumps(result)
 
     def verify_request_and_dispatch(self, http_request_headers, http_request_body):
         if self._is_console_manual_test(http_request_body):
             print("Alexa Manual JSON test: signature verified, timestamp-age check skipped", flush=True)
-            return self.manual_test_handler.verify_request_and_dispatch(
-                http_request_headers=http_request_headers,
-                http_request_body=http_request_body,
-            )
-        return self.strict_handler.verify_request_and_dispatch(
-            http_request_headers=http_request_headers,
-            http_request_body=http_request_body,
-        )
+            result = self.manual_test_handler.verify_request_and_dispatch(http_request_headers=http_request_headers, http_request_body=http_request_body)
+            return self._as_json_text(result)
+        result = self.strict_handler.verify_request_and_dispatch(http_request_headers=http_request_headers, http_request_body=http_request_body)
+        return self._as_json_text(result)
 
 
-# Handler instances already exist inside the ASK Skill object, but Python
-# resolves methods and module globals at call time, so these patches safely
-# harden the existing live handlers without rebuilding the interaction model.
 alexa._find_item = _safe_find_item
 alexa.CompleteBillIntentHandler.handle = _complete_bill_once
-
-# The endpoint looks up this module global at request time. Preserve strict
-# verification for production and use the relaxed timestamp policy only for
-# the signed Alexa Developer Console test identity above.
 alexa.webservice_handler = _ManualTestAwareWebserviceHandler(alexa.webservice_handler)
