@@ -117,6 +117,8 @@ import backend.alexa_https_ext  # noqa: F401
 import backend.alexa_hardening_ext  # noqa: F401
 # Clean spoken product names, hide junk variants and use safe historical rate fallback.
 import backend.alexa_voice_quality_ext  # noqa: F401
+# Inject recent live items/customers into Alexa custom slots from the database.
+import backend.alexa_dynamic_entities_ext  # noqa: F401
 # Public privacy policy required for Alexa certification.
 import backend.privacy_policy_ext  # noqa: F401
 
