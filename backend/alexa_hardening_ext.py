@@ -23,11 +23,7 @@ def _launch_shop_sathi(self, handler_input):
     attrs["cart"] = []
     attrs.pop("customer", None)
     attrs.pop("pending_item", None)
-    return alexa._speak(
-        handler_input,
-        "Shop Sathi ready hai. Customer ka naam bolo.",
-        "Customer ka naam bolo.",
-    )
+    return alexa._speak(handler_input, "Shop Sathi ready hai. Customer ka naam bolo.", "Customer ka naam bolo.")
 
 
 def _select_customer_clean(self, handler_input):
@@ -42,49 +38,79 @@ def _select_customer_clean(self, handler_input):
     return alexa._speak(handler_input, f"{customer['name']} select ho gaya. Item bolo.", "Item bolo.")
 
 
-def _safe_find_item(phrase: str) -> dict[str, Any] | None:
+def _candidate_rows(phrase: str) -> tuple[str, str, list[dict[str, Any]]]:
     bid = alexa._business_id()
     name, requested_size = alexa._split_item_phrase(phrase)
-    if not name:
-        return None
+    query = _norm(name)
+    if not query:
+        return "", "", []
     with db() as conn:
         rows = [dict(r) for r in conn.execute(
             """
             SELECT * FROM items
             WHERE business_id=? AND COALESCE(archived_at,'')='' AND name LIKE ?
-            ORDER BY name,size,id LIMIT 100
+            ORDER BY name,size,id LIMIT 150
             """,
             (bid, f"%{name}%"),
         ).fetchall()]
-    if not rows:
-        return None
-
-    query = _norm(name)
     if requested_size:
         rows = [r for r in rows if alexa._normalize_size(r.get("size", "")) == requested_size]
-        if not rows:
-            return None
+    if not re.match(r"^\d+\b", query):
+        uncoded = [r for r in rows if not re.match(r"^\d+\b", _norm(r.get("name")))]
+        if uncoded:
+            rows = uncoded
+    return query, requested_size, rows
 
-    query_has_numeric_prefix = bool(re.match(r"^\d+\b", query))
-    if not query_has_numeric_prefix:
-        uncoded_rows = [r for r in rows if not re.match(r"^\d+\b", _norm(r.get("name")))]
-        if uncoded_rows:
-            rows = uncoded_rows
-        else:
-            return None
 
-    def score(row: dict[str, Any]) -> tuple[int, int, int, int]:
+def _resolve_item(phrase: str) -> tuple[str, dict[str, Any] | None, list[str]]:
+    """Return ok / ambiguous / missing without silently selecting a different product family."""
+    query, requested_size, rows = _candidate_rows(phrase)
+    if not query or not rows:
+        return "missing", None, []
+
+    exact_name = [r for r in rows if _norm(r.get("name")) == query]
+    pool = exact_name or rows
+
+    distinct_names: list[str] = []
+    seen_names: set[str] = set()
+    for row in pool:
+        key = _norm(row.get("name"))
+        if key not in seen_names:
+            seen_names.add(key)
+            distinct_names.append(str(row.get("name") or ""))
+
+    if not exact_name and len(distinct_names) > 1:
+        return "ambiguous", None, distinct_names[:4]
+
+    # If the exact product itself has several size/batch variants, do not guess a size.
+    if not requested_size:
+        sizes = []
+        seen_sizes = set()
+        for row in pool:
+            size = str(row.get("size") or "").strip()
+            key = _norm(size)
+            if key not in seen_sizes:
+                seen_sizes.add(key)
+                sizes.append(size)
+        meaningful_sizes = [s for s in sizes if s]
+        if len(meaningful_sizes) > 1:
+            return "ambiguous", None, [f"{distinct_names[0]} {s}" for s in meaningful_sizes[:4]]
+
+    def score(row: dict[str, Any]) -> tuple[int, int, int]:
         item_name = _norm(row.get("name"))
-        words = set(re.findall(r"[\w]+", item_name))
-        exact = 4 if item_name == query else 0
-        starts = 3 if item_name.startswith(query + " ") else 0
-        word = 2 if query in words else 0
+        exact = 3 if item_name == query else 0
+        starts = 2 if item_name.startswith(query + " ") else 0
         contains = 1 if query in item_name else 0
         priced = 1 if float(row.get("sale_price") or 0) > 0 else 0
-        return (max(exact, starts, word, contains), priced, -len(item_name), -int(row.get("id") or 0))
+        return (max(exact, starts, contains), priced, -int(row.get("id") or 0))
 
-    best = max(rows, key=score)
-    return best if score(best)[0] > 0 else None
+    best = max(pool, key=score)
+    return ("ok", best, []) if score(best)[0] > 0 else ("missing", None, [])
+
+
+def _safe_find_item(phrase: str) -> dict[str, Any] | None:
+    status, item, _ = _resolve_item(phrase)
+    return item if status == "ok" else None
 
 
 def _effective_rate(item_id: int, party_id: int | None) -> tuple[float, str]:
@@ -110,8 +136,11 @@ def _queue_item_and_ask_quantity(self, handler_input):
             return alexa._speak(handler_input, f"{customer_match['name']} select ho gaya. Item bolo.", "Item bolo.")
         return alexa._speak(handler_input, "Pehle customer select karo.", "Customer ka naam bolo.")
 
-    item = _safe_find_item(phrase)
-    if not item:
+    status, item, choices = _resolve_item(phrase)
+    if status == "ambiguous":
+        choice_text = ", ".join(choices)
+        return alexa._speak(handler_input, f"{phrase} ke multiple item hain: {choice_text}. Exact item ya size bolo.", "Exact item naam ya size bolo.")
+    if status != "ok" or not item:
         return alexa._speak(handler_input, f"{phrase} item nahi mila. Naam ya size dobara bolo.", "Item bolo.")
 
     attrs["pending_item"] = {
@@ -121,11 +150,7 @@ def _queue_item_and_ask_quantity(self, handler_input):
         "gst_rate": float(item.get("gst_rate") or 0),
     }
     size = f" {item.get('size')}" if item.get("size") else ""
-    return alexa._speak(
-        handler_input,
-        f"{item['name']}{size}. Kitni quantity?",
-        "Quantity bolo, jaise 1 kilo ya 2 packet.",
-    )
+    return alexa._speak(handler_input, f"{item['name']}{size}. Kitni quantity?", "Quantity bolo, jaise 1 kilo ya 2 packet.")
 
 
 def _unit_label(unit: str) -> str:
@@ -162,6 +187,11 @@ class QuantityIntentHandler(AbstractRequestHandler):
 
         customer = attrs.get("customer") or {}
         rate, source = _effective_rate(int(pending["item_id"]), int(customer["id"]) if customer.get("id") else None)
+        if rate <= 0:
+            item_name = str(pending.get("item_name") or "item")
+            attrs.pop("pending_item", None)
+            return alexa._speak(handler_input, f"{item_name} ka sale rate zero ya missing hai. Is item ko bill mein add nahi kiya. Dusra item ya sahi size bolo.", "Dusra item bolo.")
+
         attrs.setdefault("cart", []).append({
             "item_id": int(pending["item_id"]),
             "item_name": str(pending["item_name"]),
@@ -172,23 +202,17 @@ class QuantityIntentHandler(AbstractRequestHandler):
         })
         attrs.pop("pending_item", None)
 
-        source_text = {
-            "fixed": "customer rate",
-            "recent_15_days": "recent bill rate",
-            "catalog": "default customer rate",
-        }.get(source, "item rate")
+        source_text = {"fixed": "customer rate", "recent_15_days": "recent bill rate", "catalog": "default customer rate"}.get(source, "item rate")
         spoken_unit = f" {_unit_label(unit)}" if unit else ""
-        return alexa._speak(
-            handler_input,
-            f"{alexa._money(qty)}{spoken_unit} {pending['item_name']}, rate {alexa._money(rate)} rupaye, {source_text}, add ho gaya. Agla item bolo, ya bill bana do.",
-            "Agla item bolo, ya bill bana do.",
-        )
+        return alexa._speak(handler_input, f"{alexa._money(qty)}{spoken_unit} {pending['item_name']}, rate {alexa._money(rate)} rupaye, {source_text}, add ho gaya. Agla item bolo, ya bill bana do.", "Agla item bolo, ya bill bana do.")
 
 
 def _check_rate_with_customer(self, handler_input):
     phrase = alexa._slot(handler_input, "item")
-    item = _safe_find_item(phrase)
-    if not item:
+    status, item, choices = _resolve_item(phrase)
+    if status == "ambiguous":
+        return alexa._speak(handler_input, f"{phrase} ke multiple item hain: {', '.join(choices)}. Exact item bolo.", "Exact item bolo.")
+    if status != "ok" or not item:
         return alexa._speak(handler_input, f"{phrase} item nahi mila.", "Dusra item bolo.")
     attrs = alexa._attrs(handler_input)
     customer = attrs.get("customer") or {}
@@ -212,6 +236,10 @@ def _complete_bill_once(self, handler_input):
         return alexa._speak(handler_input, "Pehle current item ki quantity bolo.", "Quantity bolo.")
     if not cart:
         return alexa._speak(handler_input, "Bill mein item nahi hai. Pehle item add karo.", "Item bolo.")
+    bad_lines = [line for line in cart if float(line.get("rate") or 0) <= 0]
+    if bad_lines:
+        names = ", ".join(str(line.get("item_name") or "item") for line in bad_lines[:3])
+        return alexa._speak(handler_input, f"Bill save nahi hoga. {names} ka rate zero ya missing hai. Pehle rate theek karo.", "Rate theek karke phir bill banao.")
 
     request_id = _request_id(handler_input)
     bid = alexa._business_id()
@@ -237,16 +265,10 @@ def _complete_bill_once(self, handler_input):
                     return alexa._speak(handler_input, f"Bill pehle hi ban chuka hai. Total {alexa._money(previous['total'])} rupaye. Bill number {previous['invoice_no']}.", end=True)
                 raise
 
-        payload = TransactionIn(
-            party_id=int(customer["id"]), paid=0, payment_mode="cash",
-            notes="Created by Alexa HTTPS", items=[TxLineIn(**line) for line in cart],
-        )
+        payload = TransactionIn(party_id=int(customer["id"]), paid=0, payment_mode="cash", notes="Created by Alexa HTTPS", items=[TxLineIn(**line) for line in cart])
         sale = insert_sale(conn, bid, payload)
         if request_id:
-            conn.execute(
-                "UPDATE alexa_request_receipts SET sale_id=?,invoice_no=?,total=? WHERE request_id=?",
-                (sale.get("id"), sale.get("invoice_no", ""), float(sale.get("total") or 0), request_id),
-            )
+            conn.execute("UPDATE alexa_request_receipts SET sale_id=?,invoice_no=?,total=? WHERE request_id=?", (sale.get("id"), sale.get("invoice_no", ""), float(sale.get("total") or 0), request_id))
 
     attrs["cart"] = []
     return alexa._speak(handler_input, f"Bill ban gaya. Total {alexa._money(sale.get('total'))} rupaye. Bill number {sale.get('invoice_no', '')}.", end=True)
@@ -293,7 +315,5 @@ alexa.CheckRateIntentHandler.handle = _check_rate_with_customer
 alexa.CompleteBillIntentHandler.handle = _complete_bill_once
 alexa.sb.add_request_handler(QuantityIntentHandler())
 
-# Rebuild the strict skill after registering QuantityIntentHandler, then wrap it
-# with the signed Manual JSON timestamp exception used only by Alexa Console tests.
 _strict_handler = WebserviceSkillHandler(skill=alexa.sb.create(), verify_signature=True, verify_timestamp=True)
 alexa.webservice_handler = _ManualTestAwareWebserviceHandler(_strict_handler)
