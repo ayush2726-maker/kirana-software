@@ -40,9 +40,6 @@ def _safe_find_item(phrase: str) -> dict[str, Any] | None:
         if not rows:
             return None
 
-    # Do not silently turn a plain spoken item such as "gehu" into a coded
-    # variant such as "147 gehu". Coded/numeric-prefixed rows are only eligible
-    # when the user actually speaks a numeric-prefixed query.
     query_has_numeric_prefix = bool(re.match(r"^\d+\b", query))
     if not query_has_numeric_prefix:
         uncoded_rows = [r for r in rows if not re.match(r"^\d+\b", _norm(r.get("name")))]
@@ -83,6 +80,22 @@ def _effective_rate(item_id: int, party_id: int | None) -> tuple[float, str]:
 def _add_item_with_customer_rate(self, handler_input):
     phrase = alexa._slot(handler_input, "item")
     qty_text = alexa._slot(handler_input, "quantity")
+    attrs = alexa._attrs(handler_input)
+
+    # Alexa may route a bare name such as "Kishore Traders" to AddItemIntent
+    # because AMAZON.SearchQuery cannot be used as a carrier-free sample utterance.
+    # While no customer is selected, first try that spoken phrase as a customer.
+    if not attrs.get("customer") and phrase:
+        customer_match = alexa._find_customer(phrase)
+        if customer_match:
+            attrs["customer"] = {"id": customer_match["id"], "name": customer_match["name"]}
+            attrs["cart"] = []
+            return alexa._speak(
+                handler_input,
+                f"{customer_match['name']} select ho gaya. Item bolo.",
+                "Item bolo.",
+            )
+
     try:
         qty = float(qty_text) if qty_text else 1.0
     except ValueError:
@@ -91,9 +104,10 @@ def _add_item_with_customer_rate(self, handler_input):
 
     item = _safe_find_item(phrase)
     if not item:
+        if not attrs.get("customer"):
+            return alexa._speak(handler_input, f"{phrase} customer nahi mila. Dusra customer naam bolo.", "Customer ka naam bolo.")
         return alexa._speak(handler_input, f"{phrase} item nahi mila. Naam ya size dobara bolo.", "Item bolo.")
 
-    attrs = alexa._attrs(handler_input)
     customer = attrs.get("customer") or {}
     rate, source = _effective_rate(int(item["id"]), int(customer["id"]) if customer.get("id") else None)
     cart = attrs.setdefault("cart", [])
