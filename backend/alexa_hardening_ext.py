@@ -19,12 +19,6 @@ def _norm(value: Any) -> str:
 
 
 def _name_key(value: Any) -> str:
-    """Canonical product-name key for voice matching.
-
-    Ignore translated text in parentheses and common spellings of saunf so
-    duplicate display names such as Barik Souff (बारिक सौंफ) and
-    Barik Souff (बारीक सौंफ) are treated as one product family.
-    """
     text = _norm(value)
     text = re.sub(r"\([^)]*\)", " ", text)
     text = re.sub(r"\b(?:souff|sauf|saunf)\b", "souf", text)
@@ -32,13 +26,13 @@ def _name_key(value: Any) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _launch_shop_sathi(self, handler_input):
+def _launch_billing_sathi(self, handler_input):
     attrs = alexa._attrs(handler_input)
     attrs["cart"] = []
     attrs.pop("customer", None)
     attrs.pop("pending_item", None)
     attrs.pop("pending_item_query", None)
-    return alexa._speak(handler_input, "Shop Sathi ready hai. Customer ka naam bolo.", "Customer ka naam bolo.")
+    return alexa._speak(handler_input, "Billing Sathi ready hai. Customer ka naam bolo.", "Customer ka naam bolo.")
 
 
 def _select_customer_clean(self, handler_input):
@@ -60,9 +54,6 @@ def _candidate_rows(phrase: str) -> tuple[str, str, list[dict[str, Any]]]:
     query = _name_key(name)
     if not query:
         return "", "", []
-
-    # Search by the strongest simple token so spelling/parenthetical variants
-    # can still be compared locally with _name_key.
     tokens = [t for t in query.split() if len(t) > 1]
     search_term = tokens[0] if tokens else str(name).strip()
     with db() as conn:
@@ -74,10 +65,7 @@ def _candidate_rows(phrase: str) -> tuple[str, str, list[dict[str, Any]]]:
             """,
             (bid, f"%{search_term}%"),
         ).fetchall()]
-
-    # Keep only rows whose canonical name actually relates to the query.
     rows = [r for r in rows if query in _name_key(r.get("name")) or _name_key(r.get("name")) in query]
-
     if requested_size:
         rows = [r for r in rows if alexa._normalize_size(r.get("size", "")) == requested_size]
     if not re.match(r"^\d+\b", query):
@@ -88,36 +76,26 @@ def _candidate_rows(phrase: str) -> tuple[str, str, list[dict[str, Any]]]:
 
 
 def _resolve_item(phrase: str) -> tuple[str, dict[str, Any] | None, list[str]]:
-    """Return ok / ambiguous / missing without silently selecting another family."""
     query, requested_size, rows = _candidate_rows(phrase)
     if not query or not rows:
         return "missing", None, []
-
     exact_name = [r for r in rows if _name_key(r.get("name")) == query]
     pool = exact_name or rows
-
-    # Collapse duplicate display names that differ only in Hindi text/spelling.
     families: dict[str, list[dict[str, Any]]] = {}
     family_labels: dict[str, str] = {}
     for row in pool:
         key = _name_key(row.get("name"))
         families.setdefault(key, []).append(row)
         family_labels.setdefault(key, str(row.get("name") or ""))
-
     if not exact_name and len(families) > 1:
         labels = [family_labels[k] for k in list(families)[:4]]
         return "ambiguous", None, labels
-
-    # Use the exact/canonical family if available, otherwise the sole family.
     if exact_name:
         family_key = query
         family_rows = families.get(family_key, exact_name)
     else:
         family_key = next(iter(families))
         family_rows = families[family_key]
-
-    # Multiple rows with the same canonical name are variants, not duplicate
-    # product names. Ask only for meaningful distinct sizes/batches.
     if not requested_size and len(family_rows) > 1:
         size_labels: list[str] = []
         seen_sizes: set[str] = set()
@@ -130,7 +108,6 @@ def _resolve_item(phrase: str) -> tuple[str, dict[str, Any] | None, list[str]]:
         if len(size_labels) > 1:
             base = family_labels.get(family_key, str(family_rows[0].get("name") or ""))
             return "ambiguous", None, [f"{base} {s}" for s in size_labels[:5]]
-
     def score(row: dict[str, Any]) -> tuple[int, int, int]:
         item_name = _name_key(row.get("name"))
         exact = 3 if item_name == query else 0
@@ -138,7 +115,6 @@ def _resolve_item(phrase: str) -> tuple[str, dict[str, Any] | None, list[str]]:
         contains = 1 if query in item_name else 0
         priced = 1 if float(row.get("sale_price") or 0) > 0 else 0
         return (max(exact, starts, contains), priced, -int(row.get("id") or 0))
-
     best = max(family_rows, key=score)
     return ("ok", best, []) if score(best)[0] > 0 else ("missing", None, [])
 
@@ -171,7 +147,6 @@ def _set_pending_item(attrs: dict[str, Any], item: dict[str, Any]) -> None:
 def _queue_item_and_ask_quantity(self, handler_input):
     phrase = alexa._slot(handler_input, "item")
     attrs = alexa._attrs(handler_input)
-
     if not attrs.get("customer"):
         customer_match = alexa._find_customer(phrase) if phrase else None
         if customer_match:
@@ -181,9 +156,6 @@ def _queue_item_and_ask_quantity(self, handler_input):
             attrs.pop("pending_item_query", None)
             return alexa._speak(handler_input, f"{customer_match['name']} select ho gaya. Item bolo.", "Item bolo.")
         return alexa._speak(handler_input, "Pehle customer select karo.", "Customer ka naam bolo.")
-
-    # When Alexa is asking for a refinement, combine short follow-ups with the
-    # previous query. Example: jeera -> "200" becomes "jeera 200".
     previous_query = str(attrs.get("pending_item_query") or "").strip()
     combined_phrase = phrase
     if previous_query and phrase:
@@ -191,14 +163,11 @@ def _queue_item_and_ask_quantity(self, handler_input):
         prev = _name_key(previous_query)
         if p != prev and not p.startswith(prev + " "):
             combined_phrase = f"{previous_query} {phrase}".strip()
-
     status, item, choices = _resolve_item(combined_phrase)
     if status == "ambiguous":
         attrs["pending_item_query"] = combined_phrase
-        choice_text = ", ".join(choices)
-        return alexa._speak(handler_input, f"{combined_phrase} ke multiple variant hain: {choice_text}. Sirf size ya exact naam bolo.", "Size ya exact item bolo.")
+        return alexa._speak(handler_input, f"{combined_phrase} ke multiple variant hain: {', '.join(choices)}. Sirf size ya exact naam bolo.", "Size ya exact item bolo.")
     if status != "ok" or not item:
-        # Retry the fresh phrase alone in case the user changed products.
         if combined_phrase != phrase:
             status, item, choices = _resolve_item(phrase)
         if status == "ambiguous":
@@ -207,21 +176,34 @@ def _queue_item_and_ask_quantity(self, handler_input):
         if status != "ok" or not item:
             attrs.pop("pending_item_query", None)
             return alexa._speak(handler_input, f"{phrase} item nahi mila. Naam dobara bolo.", "Item bolo.")
-
     _set_pending_item(attrs, item)
     size = f" {item.get('size')}" if item.get("size") else ""
-    return alexa._speak(handler_input, f"{item['name']}{size}. Kitni quantity?", "Quantity bolo, jaise 1 kilo ya 2 packet.")
+    return alexa._speak(handler_input, f"{item['name']}{size}. Kitni quantity?", "Quantity bolo, jaise 1 kilo ya 200 gram.")
 
 
 def _unit_label(unit: str) -> str:
     unit = _norm(unit)
     mapping = {
         "kg": "kilo", "kilo": "kilo", "kilogram": "kilo",
-        "gm": "gram", "gram": "gram",
+        "gm": "gram", "g": "gram", "gram": "gram", "grams": "gram",
         "packet": "packet", "pack": "packet", "pcs": "piece", "piece": "piece",
-        "ltr": "litre", "litre": "litre", "liter": "litre",
+        "ltr": "litre", "litre": "litre", "liter": "litre", "ml": "millilitre",
     }
     return mapping.get(unit, unit)
+
+
+def _billing_quantity(qty: float, unit: str) -> float:
+    """Convert spoken quantity to the quantity expected by rate-per-base-unit billing.
+
+    Grocery rates in this app are stored per kg / litre for loose goods. Therefore
+    200 gram must bill as 0.2 kg, not as 200 kg. Packet/piece counts stay unchanged.
+    """
+    u = _norm(unit)
+    if u in {"gm", "g", "gram", "grams"}:
+        return qty / 1000.0
+    if u in {"ml", "millilitre", "milliliter"}:
+        return qty / 1000.0
+    return qty
 
 
 class QuantityIntentHandler(AbstractRequestHandler):
@@ -233,12 +215,8 @@ class QuantityIntentHandler(AbstractRequestHandler):
         pending = attrs.get("pending_item")
         if not attrs.get("customer"):
             return alexa._speak(handler_input, "Pehle customer select karo.", "Customer ka naam bolo.")
-
         qty_text = alexa._slot(handler_input, "quantity")
         unit = alexa._slot(handler_input, "unit")
-
-        # If we are still disambiguating an item, a numeric utterance is an
-        # item refinement, not a sale quantity yet (e.g. jeera -> 200).
         pending_query = str(attrs.get("pending_item_query") or "").strip()
         if not pending and pending_query and qty_text:
             refinement = f"{qty_text} {unit}".strip()
@@ -247,29 +225,28 @@ class QuantityIntentHandler(AbstractRequestHandler):
             if status == "ok" and item:
                 _set_pending_item(attrs, item)
                 size = f" {item.get('size')}" if item.get("size") else ""
-                return alexa._speak(handler_input, f"{item['name']}{size} select ho gaya. Ab quantity bolo.", "Quantity bolo, jaise 1 kilo ya 2 packet.")
+                return alexa._speak(handler_input, f"{item['name']}{size} select ho gaya. Ab quantity bolo.", "Quantity bolo, jaise 1 kilo ya 200 gram.")
             if status == "ambiguous":
                 attrs["pending_item_query"] = phrase
                 return alexa._speak(handler_input, f"Abhi bhi multiple variant hain: {', '.join(choices)}. Aur exact size bolo.", "Exact size bolo.")
             return alexa._speak(handler_input, f"{refinement} wala variant nahi mila. Dusra size bolo.", "Size bolo.")
-
         if not pending:
             return alexa._speak(handler_input, "Pehle item bolo.", "Item bolo.")
-
         try:
-            qty = float(qty_text)
+            spoken_qty = float(qty_text)
         except (TypeError, ValueError):
-            qty = 0
+            spoken_qty = 0
+        if spoken_qty <= 0:
+            return alexa._speak(handler_input, "Quantity samajh nahi aayi. Dobara bolo.", "Jaise 1 kilo ya 200 gram.")
+        qty = _billing_quantity(spoken_qty, unit)
         if qty <= 0:
-            return alexa._speak(handler_input, "Quantity samajh nahi aayi. Dobara bolo.", "Jaise 1 kilo ya 2 packet.")
-
+            return alexa._speak(handler_input, "Quantity samajh nahi aayi. Dobara bolo.", "Jaise 1 kilo ya 200 gram.")
         customer = attrs.get("customer") or {}
         rate, source = _effective_rate(int(pending["item_id"]), int(customer["id"]) if customer.get("id") else None)
         if rate <= 0:
             item_name = str(pending.get("item_name") or "item")
             attrs.pop("pending_item", None)
             return alexa._speak(handler_input, f"{item_name} ka sale rate zero ya missing hai. Is item ko bill mein add nahi kiya. Dusra item ya sahi size bolo.", "Dusra item bolo.")
-
         attrs.setdefault("cart", []).append({
             "item_id": int(pending["item_id"]),
             "item_name": str(pending["item_name"]),
@@ -280,10 +257,9 @@ class QuantityIntentHandler(AbstractRequestHandler):
         })
         attrs.pop("pending_item", None)
         attrs.pop("pending_item_query", None)
-
-        source_text = {"fixed": "customer rate", "recent_15_days": "recent bill rate", "catalog": "default customer rate"}.get(source, "item rate")
+        source_text = {"fixed": "customer rate", "recent_15_days": "recent bill rate", "catalog": "default customer rate", "last_nonzero_sale": "recent bill rate", "last_nonzero_variant_sale": "recent bill rate"}.get(source, "item rate")
         spoken_unit = f" {_unit_label(unit)}" if unit else ""
-        return alexa._speak(handler_input, f"{alexa._money(qty)}{spoken_unit} {pending['item_name']}, rate {alexa._money(rate)} rupaye, {source_text}, add ho gaya. Agla item bolo, ya bill bana do.", "Agla item bolo, ya bill bana do.")
+        return alexa._speak(handler_input, f"{alexa._money(spoken_qty)}{spoken_unit} {pending['item_name']}, rate {alexa._money(rate)} rupaye, {source_text}, add ho gaya. Agla item bolo, ya bill bana do.", "Agla item bolo, ya bill bana do.")
 
 
 def _check_rate_with_customer(self, handler_input):
@@ -321,7 +297,6 @@ def _complete_bill_once(self, handler_input):
     if bad_lines:
         names = ", ".join(str(line.get("item_name") or "item") for line in bad_lines[:3])
         return alexa._speak(handler_input, f"Bill save nahi hoga. {names} ka rate zero ya missing hai. Pehle rate theek karo.", "Rate theek karke phir bill banao.")
-
     request_id = _request_id(handler_input)
     bid = alexa._business_id()
     with db() as conn:
@@ -345,12 +320,10 @@ def _complete_bill_once(self, handler_input):
                     attrs["cart"] = []
                     return alexa._speak(handler_input, f"Bill pehle hi ban chuka hai. Total {alexa._money(previous['total'])} rupaye. Bill number {previous['invoice_no']}.", end=True)
                 raise
-
         payload = TransactionIn(party_id=int(customer["id"]), paid=0, payment_mode="cash", notes="Created by Alexa HTTPS", items=[TxLineIn(**line) for line in cart])
         sale = insert_sale(conn, bid, payload)
         if request_id:
             conn.execute("UPDATE alexa_request_receipts SET sale_id=?,invoice_no=?,total=? WHERE request_id=?", (sale.get("id"), sale.get("invoice_no", ""), float(sale.get("total") or 0), request_id))
-
     attrs["cart"] = []
     attrs.pop("pending_item_query", None)
     return alexa._speak(handler_input, f"Bill ban gaya. Total {alexa._money(sale.get('total'))} rupaye. Bill number {sale.get('invoice_no', '')}.", end=True)
@@ -360,7 +333,6 @@ class _ManualTestAwareWebserviceHandler:
     def __init__(self, strict_handler):
         self.strict_handler = strict_handler
         self.manual_test_handler = WebserviceSkillHandler(skill=alexa.sb.create(), verify_signature=True, verify_timestamp=False)
-
     @staticmethod
     def _is_console_manual_test(raw_body: str) -> bool:
         try:
@@ -373,13 +345,11 @@ class _ManualTestAwareWebserviceHandler:
         device_id = str(((context_system.get("device") or {}).get("deviceId")) or "")
         request_id = str(((payload.get("request") or {}).get("requestId")) or "")
         return user_id == "amzn1.ask.account.test-user" and device_id == "test-device" and request_id.startswith("amzn1.echo-api.request.")
-
     @staticmethod
     def _as_json_text(result):
         if isinstance(result, (str, bytes, bytearray)):
             return result
         return json.dumps(result)
-
     def verify_request_and_dispatch(self, http_request_headers, http_request_body):
         if self._is_console_manual_test(http_request_body):
             print("Alexa Manual JSON test: signature verified, timestamp-age check skipped", flush=True)
@@ -389,7 +359,7 @@ class _ManualTestAwareWebserviceHandler:
         return self._as_json_text(result)
 
 
-alexa.LaunchRequestHandler.handle = _launch_shop_sathi
+alexa.LaunchRequestHandler.handle = _launch_billing_sathi
 alexa.SelectCustomerIntentHandler.handle = _select_customer_clean
 alexa._find_item = _safe_find_item
 alexa.AddItemIntentHandler.handle = _queue_item_and_ask_quantity
