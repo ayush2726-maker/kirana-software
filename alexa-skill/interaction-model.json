@@ -56,7 +56,10 @@
             {"name": {"value": "barik souff", "synonyms": ["barik souf", "barik saunf"]}},
             {"name": {"value": "gulab souf", "synonyms": ["gulab saunf"]}},
             {"name": {"value": "souff moti", "synonyms": ["moti souf", "moti saunf"]}},
-            {"name": {"value": "kabli", "synonyms": ["kabuli", "kabuli chana", "kabli chana"]}}
+            {"name": {"value": "kabli", "synonyms": ["kabuli", "kabuli chana", "kabli chana"]}},
+            {"name": {"value": "moong", "synonyms": ["mung"]}},
+            {"name": {"value": "moong daal", "synonyms": ["moong dal", "mung dal", "mung daal"]}},
+            {"name": {"value": "moong atta", "synonyms": ["mung atta"]}}
           ]
         },
         {
