@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from backend.app import TransactionIn, TxLineIn, app, db, insert_sale
 
 
-# This is the current Alexa skill created for Kirana Software. Railway can
+# This is the current Alexa skill created for Shop Assistant. Railway can
 # override it without a code change if a new skill is created later.
 ALEXA_SKILL_ID = os.getenv(
     "ALEXA_SKILL_ID",
@@ -58,7 +58,7 @@ def _business_id() -> int:
         if len(rows) == 1:
             return int(rows[0]["id"])
         if not rows:
-            raise RuntimeError("Kirana Software setup is incomplete")
+            raise RuntimeError("Shop Assistant setup is incomplete")
         raise RuntimeError(
             "Multiple shops exist. Set ALEXA_BUSINESS_ID or ALEXA_OWNER_USERNAME in Railway."
         )
@@ -177,7 +177,7 @@ class LaunchRequestHandler(AbstractRequestHandler):
         _attrs(handler_input).setdefault("cart", [])
         return _speak(
             handler_input,
-            "Kirana Software ready hai. Customer ka naam bolo, ya aaj ki sale pucho.",
+            "Shop Assistant ready hai. Customer ka naam bolo, ya aaj ki sale pucho.",
             "Customer ka naam bolo.",
         )
 
@@ -355,7 +355,7 @@ class CatchAllExceptionHandler(AbstractExceptionHandler):
 
     def handle(self, handler_input: HandlerInput, exception: Exception) -> Response:
         print(f"Alexa HTTPS error: {exception}")
-        return _speak(handler_input, "Kirana Software se connect karne mein problem aa rahi hai. Thodi der baad dobara try karo.")
+        return _speak(handler_input, "Shop Assistant se connect karne mein problem aa rahi hai. Thodi der baad dobara try karo.")
 
 
 sb = SkillBuilder()
