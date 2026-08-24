@@ -24,6 +24,39 @@
         {"name": "AMAZON.StopIntent", "samples": []}
       ],
       "types": []
-    }
+    },
+    "dialog": {
+      "delegationStrategy": "SKILL_RESPONSE",
+      "intents": [
+        {
+          "name": "SelectCustomerIntent",
+          "delegationStrategy": "SKILL_RESPONSE",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "customer",
+              "type": "AMAZON.SearchQuery",
+              "confirmationRequired": false,
+              "elicitationRequired": true,
+              "prompts": {
+                "elicitation": "Elicit.Slot.SelectCustomerIntent.customer"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "prompts": [
+      {
+        "id": "Elicit.Slot.SelectCustomerIntent.customer",
+        "variations": [
+          {
+            "type": "PlainText",
+            "value": "Customer ka naam bolo."
+          }
+        ]
+      }
+    ]
   }
 }
