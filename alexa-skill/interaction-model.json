@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "shop sathi",
+      "invocationName": "billing sathi",
       "intents": [
         {
           "name": "SelectCustomerIntent",
