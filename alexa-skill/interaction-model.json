@@ -55,7 +55,8 @@
             {"name": {"value": "jeera", "synonyms": ["jira", "cumin"]}},
             {"name": {"value": "barik souff", "synonyms": ["barik souf", "barik saunf"]}},
             {"name": {"value": "gulab souf", "synonyms": ["gulab saunf"]}},
-            {"name": {"value": "souff moti", "synonyms": ["moti souf", "moti saunf"]}}
+            {"name": {"value": "souff moti", "synonyms": ["moti souf", "moti saunf"]}},
+            {"name": {"value": "kabli", "synonyms": ["kabuli", "kabuli chana", "kabli chana"]}}
           ]
         },
         {
