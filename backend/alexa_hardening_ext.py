@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from typing import Any
+
+from ask_sdk_webservice_support.webservice_handler import WebserviceSkillHandler
 
 from backend import alexa_https_ext as alexa
 from backend.app import TransactionIn, TxLineIn, db, insert_sale
@@ -126,8 +129,60 @@ def _complete_bill_once(self, handler_input):
     )
 
 
+class _ManualTestAwareWebserviceHandler:
+    """Keep production verification strict while supporting Alexa Console Manual JSON.
+
+    The Developer Console signs Manual JSON requests, but users can paste an
+    old timestamp into the payload. For the known Console test identity only,
+    keep Alexa signature verification enabled while skipping timestamp age.
+    Real Alexa/device requests continue through the original strict handler.
+    """
+
+    def __init__(self, strict_handler):
+        self.strict_handler = strict_handler
+        self.manual_test_handler = WebserviceSkillHandler(
+            skill=alexa.sb.create(),
+            verify_signature=True,
+            verify_timestamp=False,
+        )
+
+    @staticmethod
+    def _is_console_manual_test(raw_body: str) -> bool:
+        try:
+            payload = json.loads(raw_body)
+        except Exception:
+            return False
+        session = payload.get("session") or {}
+        context_system = ((payload.get("context") or {}).get("System") or {})
+        user_id = str(((session.get("user") or {}).get("userId")) or ((context_system.get("user") or {}).get("userId")) or "")
+        device_id = str(((context_system.get("device") or {}).get("deviceId")) or "")
+        request_id = str(((payload.get("request") or {}).get("requestId")) or "")
+        return (
+            user_id == "amzn1.ask.account.test-user"
+            and device_id == "test-device"
+            and request_id.startswith("amzn1.echo-api.request.")
+        )
+
+    def verify_request_and_dispatch(self, http_request_headers, http_request_body):
+        if self._is_console_manual_test(http_request_body):
+            print("Alexa Manual JSON test: signature verified, timestamp-age check skipped", flush=True)
+            return self.manual_test_handler.verify_request_and_dispatch(
+                http_request_headers=http_request_headers,
+                http_request_body=http_request_body,
+            )
+        return self.strict_handler.verify_request_and_dispatch(
+            http_request_headers=http_request_headers,
+            http_request_body=http_request_body,
+        )
+
+
 # Handler instances already exist inside the ASK Skill object, but Python
 # resolves methods and module globals at call time, so these patches safely
 # harden the existing live handlers without rebuilding the interaction model.
 alexa._find_item = _safe_find_item
 alexa.CompleteBillIntentHandler.handle = _complete_bill_once
+
+# The endpoint looks up this module global at request time. Preserve strict
+# verification for production and use the relaxed timestamp policy only for
+# the signed Alexa Developer Console test identity above.
+alexa.webservice_handler = _ManualTestAwareWebserviceHandler(alexa.webservice_handler)
