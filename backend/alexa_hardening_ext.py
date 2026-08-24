@@ -5,6 +5,8 @@ import re
 import sqlite3
 from typing import Any
 
+from ask_sdk_model import Intent, Slot
+from ask_sdk_model.dialog import ElicitSlotDirective
 from ask_sdk_webservice_support.webservice_handler import WebserviceSkillHandler
 
 from backend import alexa_https_ext as alexa
@@ -14,6 +16,33 @@ from backend.customer_catalog_15day_fix_ext import recommended_rate_15day
 
 def _norm(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "").strip().casefold())
+
+
+def _launch_and_elicit_customer(self, handler_input):
+    """Start SelectCustomerIntent dialog so the next turn may be just a bare customer name."""
+    attrs = alexa._attrs(handler_input)
+    attrs.setdefault("cart", [])
+    updated_intent = Intent(
+        name="SelectCustomerIntent",
+        confirmation_status="NONE",
+        slots={
+            "customer": Slot(
+                name="customer",
+                confirmation_status="NONE",
+            )
+        },
+    )
+    return (
+        handler_input.response_builder
+        .speak("Shop Assistant ready hai. Customer ka naam bolo.")
+        .add_directive(
+            ElicitSlotDirective(
+                slot_to_elicit="customer",
+                updated_intent=updated_intent,
+            )
+        )
+        .response
+    )
 
 
 def _safe_find_item(phrase: str) -> dict[str, Any] | None:
@@ -82,9 +111,6 @@ def _add_item_with_customer_rate(self, handler_input):
     qty_text = alexa._slot(handler_input, "quantity")
     attrs = alexa._attrs(handler_input)
 
-    # Alexa may route a bare name such as "Kishore Traders" to AddItemIntent
-    # because AMAZON.SearchQuery cannot be used as a carrier-free sample utterance.
-    # While no customer is selected, first try that spoken phrase as a customer.
     if not attrs.get("customer") and phrase:
         customer_match = alexa._find_customer(phrase)
         if customer_match:
@@ -231,6 +257,7 @@ class _ManualTestAwareWebserviceHandler:
         return self._as_json_text(result)
 
 
+alexa.LaunchRequestHandler.handle = _launch_and_elicit_customer
 alexa._find_item = _safe_find_item
 alexa.AddItemIntentHandler.handle = _add_item_with_customer_rate
 alexa.CheckRateIntentHandler.handle = _check_rate_with_customer
