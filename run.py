@@ -113,6 +113,10 @@ import backend.advanced_reports_ext  # noqa: F401
 import backend.smart_navigation_hard_fix_ext  # noqa: F401
 # Secure Alexa Custom Skill HTTPS endpoint for Railway hosting without AWS Lambda.
 import backend.alexa_https_ext  # noqa: F401
+# Conversational Alexa flow: disambiguation, quantity turns, rate safety and idempotent billing.
+import backend.alexa_hardening_ext  # noqa: F401
+# Clean spoken product names, hide junk variants and use safe historical rate fallback.
+import backend.alexa_voice_quality_ext  # noqa: F401
 # Public privacy policy required for Alexa certification.
 import backend.privacy_policy_ext  # noqa: F401
 
