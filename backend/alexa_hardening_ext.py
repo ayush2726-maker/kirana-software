@@ -5,8 +5,6 @@ import re
 import sqlite3
 from typing import Any
 
-from ask_sdk_model import Intent, Slot
-from ask_sdk_model.dialog import ElicitSlotDirective
 from ask_sdk_webservice_support.webservice_handler import WebserviceSkillHandler
 
 from backend import alexa_https_ext as alexa
@@ -19,29 +17,20 @@ def _norm(value: Any) -> str:
 
 
 def _launch_and_elicit_customer(self, handler_input):
-    """Start SelectCustomerIntent dialog so the next turn may be just a bare customer name."""
+    """Open the skill and keep the session alive for a customer-name turn.
+
+    Dialog.ElicitSlot is intentionally not returned from LaunchRequest. Alexa
+    dialog directives are for an IntentRequest; returning one from launch can
+    make the Console/device reject an otherwise valid response and close the
+    skill before the user says the customer name.
+    """
     attrs = alexa._attrs(handler_input)
     attrs.setdefault("cart", [])
-    updated_intent = Intent(
-        name="SelectCustomerIntent",
-        confirmation_status="NONE",
-        slots={
-            "customer": Slot(
-                name="customer",
-                confirmation_status="NONE",
-            )
-        },
-    )
-    return (
-        handler_input.response_builder
-        .speak("Shop Assistant ready hai. Customer ka naam bolo.")
-        .add_directive(
-            ElicitSlotDirective(
-                slot_to_elicit="customer",
-                updated_intent=updated_intent,
-            )
-        )
-        .response
+    attrs.pop("customer", None)
+    return alexa._speak(
+        handler_input,
+        "Shop Assistant ready hai. Customer ka naam bolo.",
+        "Customer ka naam bolo.",
     )
 
 
