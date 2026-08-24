@@ -17,7 +17,7 @@ def _norm(value: Any) -> str:
 
 
 def _safe_find_item(phrase: str) -> dict[str, Any] | None:
-    """Prefer exact/canonical matches and never silently substitute a wrong size."""
+    """Prefer exact/canonical matches and never silently substitute a wrong size/code variant."""
     bid = alexa._business_id()
     name, requested_size = alexa._split_item_phrase(phrase)
     if not name:
@@ -40,6 +40,17 @@ def _safe_find_item(phrase: str) -> dict[str, Any] | None:
         if not rows:
             return None
 
+    # Do not silently turn a plain spoken item such as "gehu" into a coded
+    # variant such as "147 gehu". Coded/numeric-prefixed rows are only eligible
+    # when the user actually speaks a numeric-prefixed query.
+    query_has_numeric_prefix = bool(re.match(r"^\d+\b", query))
+    if not query_has_numeric_prefix:
+        uncoded_rows = [r for r in rows if not re.match(r"^\d+\b", _norm(r.get("name")))]
+        if uncoded_rows:
+            rows = uncoded_rows
+        else:
+            return None
+
     def score(row: dict[str, Any]) -> tuple[int, int, int, int]:
         item_name = _norm(row.get("name"))
         words = set(re.findall(r"[\w]+", item_name))
@@ -48,8 +59,6 @@ def _safe_find_item(phrase: str) -> dict[str, Any] | None:
         word = 2 if query in words else 0
         contains = 1 if query in item_name else 0
         priced = 1 if float(row.get("sale_price") or 0) > 0 else 0
-        # Higher textual match wins first; then prefer a usable priced canonical row;
-        # finally shorter names avoid odd code-prefixed matches such as "147 gehu".
         return (max(exact, starts, word, contains), priced, -len(item_name), -int(row.get("id") or 0))
 
     best = max(rows, key=score)
