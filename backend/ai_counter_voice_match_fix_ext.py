@@ -6,51 +6,30 @@ from typing import Any
 
 import backend.ai_counter_ext as counter
 
-VERSION = "182"
+VERSION = "183"
 _base_norm = counter._norm
 
-# Common Hindi/Android speech-recognition substitutions seen at the billing desk.
 PHRASE_FIXES = {
-    "शॉप": "सौंफ",
-    "सोप": "सौंफ",
-    "शोफ": "सौंफ",
-    "सौफ": "सौंफ",
-    "shop": "saunf",
-    "souf": "saunf",
-    "sauf": "saunf",
-    "souff": "saunf",
-    "चैनल": "चना",
-    "चेनल": "चना",
-    "चैनल्स": "चना",
-    "channel": "chana",
-    "channels": "chana",
-    "chanel": "chana",
-    "चनाा": "चना",
-    "कबली": "काबली",
-    "kabli": "kabuli",
-    "kaabli": "kabuli",
-    "kabuli": "kabuli",
-    "देशी": "देसी",
-    "deshi": "desi",
+    "शॉप": "सौंफ", "सोप": "सौंफ", "शोफ": "सौंफ", "सौफ": "सौंफ",
+    "shop": "saunf", "souf": "saunf", "sauf": "saunf", "souff": "saunf",
+    "चैनल": "चना", "चेनल": "चना", "चैनल्स": "चना",
+    "channel": "chana", "channels": "chana", "chanel": "chana", "चनाा": "चना",
+    "कबली": "काबली", "kabli": "kabuli", "kaabli": "kabuli", "kabuli": "kabuli",
+    "देशी": "देसी", "deshi": "desi",
 }
-
 TOKEN_FIXES = {
-    "souff": "saunf",
-    "sauf": "saunf",
-    "souf": "saunf",
-    "shop": "saunf",
-    "channel": "chana",
-    "channels": "chana",
-    "chanel": "chana",
-    "kabli": "kabuli",
-    "kaabli": "kabuli",
-    "deshi": "desi",
+    "souff": "saunf", "sauf": "saunf", "souf": "saunf", "shop": "saunf",
+    "channel": "chana", "channels": "chana", "chanel": "chana",
+    "kabli": "kabuli", "kaabli": "kabuli", "deshi": "desi",
 }
-
 QTY_TOKENS = {
     "kg", "kilogram", "kilo", "g", "gm", "gram", "grams", "ltr", "liter", "litre",
     "pcs", "pc", "piece", "pieces", "packet", "pack", "aadha", "adha", "half", "paav",
     "pav", "quarter", "dedh", "dhai", "sau", "hundred",
+}
+COMMAND_TOKENS = {
+    "remove", "delete", "hatao", "nikalo", "hatado", "hata", "do", "kar", "karo", "kardo",
+    "isme", "se", "ka", "ki", "ke", "quantity", "qty", "badha", "badhao", "badhaado", "set",
 }
 
 
@@ -67,7 +46,7 @@ def _item_query(value: Any) -> str:
     norm = _speech_fix(value)
     words = []
     for w in norm.split():
-        if w in QTY_TOKENS:
+        if w in QTY_TOKENS or w in COMMAND_TOKENS:
             continue
         if re.fullmatch(r"\d+(?:\.\d+)?", w):
             continue
@@ -110,7 +89,6 @@ def _best_rows(text: Any, rows: list[dict[str, Any]], limit: int = 4) -> list[di
         clean_size = 1 if not str(row.get("size") or "").strip() else 0
         ranked.append((name_score, overall_score, price_ok, bulk_ok, clean_size, row))
     ranked.sort(key=lambda p: (p[0], p[1], p[2], p[3], p[4]), reverse=True)
-
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
     for name_score, overall_score, _price_ok, _bulk_ok, _clean_size, row in ranked:
@@ -118,7 +96,6 @@ def _best_rows(text: Any, rows: list[dict[str, Any]], limit: int = 4) -> list[di
         if key in seen:
             continue
         seen.add(key)
-        # Route auto-select threshold uses match_score; use name-first confidence.
         effective = name_score if name_score >= 0.52 else overall_score * 0.88
         out.append({**row, "match_score": round(effective, 3)})
         if len(out) >= limit:
