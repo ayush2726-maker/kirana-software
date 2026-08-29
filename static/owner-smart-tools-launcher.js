@@ -11,6 +11,9 @@
     if (kind === 'quick') {
       return '<button type="button" data-smart-quick><span>✍️</span><div><b>Quick Write Bill</b><small>Hindi/English note likho, item + size + saved rate auto</small></div><i>›</i></button>';
     }
+    if (kind === 'desk') {
+      return '<button type="button" data-smart-desk><span>🤖</span><div><b>AI Billing Desk</b><small>Customer button dabaye aur voice se bill banaye</small></div><i>›</i></button>';
+    }
     return '<button type="button" data-smart-barcode><span>▥</span><div><b>Barcode Generator</b><small>Item barcode generate aur labels print</small></div><i>›</i></button>';
   }
 
@@ -18,6 +21,7 @@
     if (!list) return;
     if (!list.querySelector('[data-smart-photo]')) list.insertAdjacentHTML('beforeend', buttonMarkup('photo'));
     if (!list.querySelector('[data-smart-quick]')) list.insertAdjacentHTML('beforeend', buttonMarkup('quick'));
+    if (!list.querySelector('[data-smart-desk]')) list.insertAdjacentHTML('beforeend', buttonMarkup('desk'));
     if (!list.querySelector('[data-smart-barcode]')) list.insertAdjacentHTML('beforeend', buttonMarkup('barcode'));
   }
 
@@ -51,13 +55,46 @@
     window.location.assign(url);
   }
 
+  function launchDesk(target, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+    }
+    if (!target || target.dataset.launching === '1') return;
+    target.dataset.launching = '1';
+    var oldHtml = target.innerHTML;
+    target.disabled = true;
+    target.innerHTML = '<span>🤖</span><div><b>Opening AI Desk…</b><small>Secure kiosk session bana rahe hain</small></div><i>›</i>';
+    fetch('/api/ai-counter/kiosk-token', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    }).then(function (response) {
+      return response.json().then(function (data) {
+        if (!response.ok) throw new Error(data.detail || 'AI Desk open nahi hua');
+        return data;
+      });
+    }).then(function (data) {
+      if (!data || !data.url) throw new Error('AI Desk URL missing');
+      window.location.assign(data.url);
+    }).catch(function (error) {
+      target.dataset.launching = '0';
+      target.disabled = false;
+      target.innerHTML = oldHtml;
+      window.alert(error.message || 'AI Desk open nahi hua. Dobara try karein.');
+    });
+  }
+
   function smartTarget(event) {
-    return event.target && event.target.closest ? event.target.closest('[data-smart-photo],[data-smart-quick],[data-smart-barcode],#owner-smart-photo-button') : null;
+    return event.target && event.target.closest ? event.target.closest('[data-smart-photo],[data-smart-quick],[data-smart-desk],[data-smart-barcode],#owner-smart-photo-button') : null;
   }
 
   document.addEventListener('click', function (event) {
     var target = smartTarget(event);
     if (!target) return;
+    if (target.matches('[data-smart-desk]')) return launchDesk(target, event);
     if (target.matches('[data-smart-quick],#owner-smart-photo-button')) return go('/owner/quick-bill?v=149', event);
     if (target.matches('[data-smart-photo]')) return go('/owner/smart-tools?build=149#photo', event);
     if (target.matches('[data-smart-barcode]')) return go('/owner/smart-tools?build=149#barcode', event);
