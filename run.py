@@ -129,6 +129,8 @@ import backend.privacy_policy_ext  # noqa: F401
 import backend.ai_counter_route_order_ext  # noqa: F401
 # Harden Hindi/Hinglish speech corrections and prevent unrelated fuzzy item auto-selection.
 import backend.ai_counter_voice_match_fix_ext  # noqa: F401
+# Handle voice cart edits: add, subtract, set quantity and remove without reopening item search.
+import backend.ai_counter_cart_command_fix_ext  # noqa: F401
 
 # Disabled: these layered owner recovery middlewares duplicated/replaced the
 # stable owner bundle and left Android WebView in a half-loaded state.
