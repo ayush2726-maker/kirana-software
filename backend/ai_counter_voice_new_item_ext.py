@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import backend.ai_counter_route_order_ext as desk
 
-VERSION = "186"
+VERSION = "187"
 _prev_page = desk._desk_page_with_quantity_fix
 
 VOICE_CART_AND_NEW_ITEM_JS = r'''
@@ -21,17 +21,13 @@ async function handleVoiceNewItem(raw){if(S.stage!=='items')return false;var t=S
 
 def _page() -> str:
     page = _prev_page()
-    # Replace the cart-command block last, after every earlier AI desk patch.
-    start = page.find("function cartCommand(raw){")
+    start = page.find("function speechFix(s){")
     end = page.find("\nfunction splitItemQty", start)
-    helper_start = VOICE_CART_AND_NEW_ITEM_JS.find("function cartCommand(raw){")
-    helper_end = VOICE_CART_AND_NEW_ITEM_JS.find("function voiceNewItemName", helper_start)
-    if start >= 0 and end > start and helper_start >= 0 and helper_end > helper_start:
-        replacement = VOICE_CART_AND_NEW_ITEM_JS[:helper_end].rstrip()
-        page = page[:page.rfind("function speechFix", 0, start)] + replacement + "\n" + page[end + 1:]
-    else:
+    if start >= 0 and end > start:
+        page = page[:start] + VOICE_CART_AND_NEW_ITEM_JS + "\n" + page[end + 1:]
+    elif "function handleVoiceNewItem(raw)" not in page:
         marker = "async function processSpeech(raw){"
-        if marker in page and "function handleVoiceNewItem(raw)" not in page:
+        if marker in page:
             page = page.replace(marker, VOICE_CART_AND_NEW_ITEM_JS + "\n" + marker, 1)
 
     hook = "async function processSpeech(raw){clearFail();raw=String(raw||'').trim();if(!raw)return;$('heard').textContent='You: '+raw;if(cartCommand(raw))return;"
