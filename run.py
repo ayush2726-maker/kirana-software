@@ -131,6 +131,8 @@ import backend.ai_counter_route_order_ext  # noqa: F401
 import backend.ai_counter_voice_match_fix_ext  # noqa: F401
 # Handle voice cart edits: add, subtract, set quantity and remove without reopening item search.
 import backend.ai_counter_cart_command_fix_ext  # noqa: F401
+# Barcode lookup and safe quick item creation for the unattended AI desk.
+import backend.ai_counter_tools_ext  # noqa: F401
 
 # Disabled: these layered owner recovery middlewares duplicated/replaced the
 # stable owner bundle and left Android WebView in a half-loaded state.
