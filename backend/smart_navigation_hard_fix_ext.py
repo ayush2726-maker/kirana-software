@@ -7,7 +7,7 @@ import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "174"
+VERSION = "177"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
@@ -17,7 +17,7 @@ SMART_PATCH = r'''
 #kirana-smart-fixed{display:none!important}
 #kirana-smart-fixed a{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;text-decoration:none;background:#eef8fe;border:1px solid #d5e2e9;box-shadow:0 4px 14px rgba(26,74,104,.16);font-size:21px;color:#17354b}
 #kirana-smart-fixed a[data-kirana-quick-direct]{background:#fff7d8}
-.kirana-smart-menu-row{display:grid!important;grid-template-columns:44px minmax(0,1fr) 20px!important;align-items:center!important;width:100%!important;min-height:72px!important;padding:11px 12px!important;border:0!important;border-radius:13px!important;background:#fff!important;text-decoration:none!important;color:#172033!important;gap:11px!important;text-align:left!important}
+.kirana-smart-menu-row{display:grid!important;grid-template-columns:44px minmax(0,1fr) 20px!important;align-items:center!important;width:100%!important;min-height:72px!important;padding:11px 12px!important;border:0!important;border-radius:13px!important;background:#fff!important;text-decoration:none!important;color:#172033!important;gap:11px!important;text-align:left!important;position:relative!important;z-index:1!important}
 .kirana-smart-menu-row:hover{background:#f7f9fd!important}
 .kirana-smart-menu-row .ks-icon{display:grid!important;place-items:center!important;width:42px!important;height:42px!important;border-radius:13px!important;background:#eff6ff!important;color:#2563eb!important;font-size:20px!important;min-width:0!important;text-align:center!important}
 .kirana-smart-menu-row .ks-copy{display:grid!important;min-width:0!important;gap:2px!important}
@@ -28,13 +28,13 @@ SMART_PATCH = r'''
 <script id="kirana-smart-hard-nav">
 (function(){
   'use strict';
-  if(window.__kiranaSmartHard174)return;
-  window.__kiranaSmartHard174=true;
+  if(window.__kiranaSmartHard177)return;
+  window.__kiranaSmartHard177=true;
 
   var routes={
-    quick:'/owner/quick-bill?direct=174',
-    photo:'/owner/smart-tools?direct=174#photo',
-    barcode:'/owner/smart-tools?direct=174#barcode'
+    quick:'/owner/quick-bill?direct=177',
+    photo:'/owner/smart-tools?direct=177#photo',
+    barcode:'/owner/smart-tools?direct=177#barcode'
   };
 
   function go(kind){
@@ -61,6 +61,11 @@ SMART_PATCH = r'''
     a.className='kirana-smart-menu-row';
     a.setAttribute('data-kirana-'+kind+'-direct','1');
     a.innerHTML='<span class="ks-icon">'+icon+'</span><span class="ks-copy"><b>'+title+'</b><small>'+sub+'</small></span><span class="ks-next">›</span>';
+    a.addEventListener('click',function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      go(kind);
+    });
     return a;
   }
 
@@ -72,11 +77,6 @@ SMART_PATCH = r'''
       var cards=page.querySelectorAll('.card,.menu-list,[class*=menu]');
       if(cards.length)return cards[cards.length-1];
       return page;
-    }
-    var candidates=Array.prototype.slice.call(document.querySelectorAll('.menu-list,.settings-list,.list-card,.card'));
-    for(var i=0;i<candidates.length;i++){
-      var t=(candidates[i].innerText||'').toLowerCase();
-      if(t.indexOf('settings')>=0 && (t.indexOf('sale')>=0 || t.indexOf('import')>=0 || t.indexOf('business')>=0))return candidates[i];
     }
     return null;
   }
@@ -91,21 +91,10 @@ SMART_PATCH = r'''
 
   function install(){ fixed(); menu(); }
 
-  function directEvent(event){
-    var node=event.target&&event.target.closest?event.target.closest('[data-kirana-quick-direct],[data-kirana-photo-direct],[data-kirana-barcode-direct]'):null;
-    if(!node)return;
-    var kind=node.hasAttribute('data-kirana-quick-direct')?'quick':node.hasAttribute('data-kirana-photo-direct')?'photo':'barcode';
-    event.preventDefault();
-    event.stopPropagation();
-    if(event.stopImmediatePropagation)event.stopImmediatePropagation();
-    go(kind);
-  }
-
-  // pointerdown/touchstart fires before the old owner menu can rerender or steal the click.
-  document.addEventListener('pointerdown',directEvent,true);
-  document.addEventListener('touchstart',directEvent,true);
-  document.addEventListener('click',directEvent,true);
-
+  // IMPORTANT: do not capture pointerdown/touchstart globally. On Android the
+  // Menu tab can reveal content underneath the same finger and a global early
+  // handler may turn that gesture into a Smart Tools navigation. Only the
+  // actual injected row's click handler is allowed to open Smart Tools.
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true}); else install();
   [50,150,350,700,1200,2200,4000,7000].forEach(function(ms){setTimeout(install,ms)});
   if(window.MutationObserver){
@@ -128,23 +117,23 @@ def _inject(page: str) -> str:
 
 _prev_native_html = native_owner.native_owner_html
 
-def native_owner_html_174() -> str:
+def native_owner_html_177() -> str:
     return _inject(_prev_native_html())
 
-native_owner.native_owner_html = native_owner_html_174
+native_owner.native_owner_html = native_owner_html_177
 
 
 _prev_final_html = final_owner.final_owner_html
 
-def final_owner_html_174() -> str:
+def final_owner_html_177() -> str:
     return _inject(_prev_final_html())
 
-final_owner.final_owner_html = final_owner_html_174
+final_owner.final_owner_html = final_owner_html_177
 
 
 _prev_stable_page = stable_owner.stable_owner_page
 
-def stable_owner_page_174(token: str) -> HTMLResponse:
+def stable_owner_page_177(token: str) -> HTMLResponse:
     original = _prev_stable_page(token)
     page = _inject(original.body.decode("utf-8"))
     headers = {k: v for k, v in original.headers.items() if k.lower() not in {"content-length", "content-type", "set-cookie"}}
@@ -155,4 +144,4 @@ def stable_owner_page_174(token: str) -> HTMLResponse:
     response.headers["X-Kirana-Smart-Hard-Fix"] = VERSION
     return response
 
-stable_owner.stable_owner_page = stable_owner_page_174
+stable_owner.stable_owner_page = stable_owner_page_177
