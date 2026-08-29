@@ -139,6 +139,8 @@ import backend.ai_counter_voice_new_item_ext  # noqa: F401
 import backend.ai_counter_spoken_rate_ext  # noqa: F401
 # Final AI Desk guard: true add/subtract quantity arithmetic and one-tap create for unmatched speech.
 import backend.ai_counter_final_cart_new_item_fix_ext  # noqa: F401
+# Numeric product variants such as Rajshree 10/20 and Vimal 10/20 must never fuzzy-match unrelated items.
+import backend.ai_counter_named_variant_guard_ext  # noqa: F401
 
 # Disabled: these layered owner recovery middlewares duplicated/replaced the
 # stable owner bundle and left Android WebView in a half-loaded state.
