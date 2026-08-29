@@ -127,6 +127,8 @@ import backend.alexa_dynamic_entities_ext  # noqa: F401
 import backend.privacy_policy_ext  # noqa: F401
 # Secure unattended AI billing desk with isolated kiosk token and route ordering.
 import backend.ai_counter_route_order_ext  # noqa: F401
+# Harden Hindi/Hinglish speech corrections and prevent unrelated fuzzy item auto-selection.
+import backend.ai_counter_voice_match_fix_ext  # noqa: F401
 
 # Disabled: these layered owner recovery middlewares duplicated/replaced the
 # stable owner bundle and left Android WebView in a half-loaded state.
