@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from fastapi import HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -11,7 +13,7 @@ from backend.app import app, db, today_iso
 
 
 AI_DESK_GET_PATHS = {"/owner/ai-desk", "/api/ai-counter/bootstrap"}
-VERSION = "177"
+VERSION = "178"
 
 
 def _move_ai_desk_get_routes_before_spa_fallback() -> None:
@@ -27,6 +29,74 @@ def _move_ai_desk_get_routes_before_spa_fallback() -> None:
     fallback_index = next((i for i, route in enumerate(app.router.routes) if getattr(route, "path", None) == "/{path:path}"), len(app.router.routes))
     for offset, route in enumerate(selected):
         app.router.routes.insert(fallback_index + offset, route)
+
+
+# Android / Google speech commonly returns grocery words as ordinary words.
+# Correct only high-confidence grocery confusions, then remove quantity/unit noise
+# before fuzzy matching so unrelated catalog rows cannot win on strings like
+# "1 kilo shop" or "aadha kilo desi channel".
+_prev_norm = ai_counter._norm
+_prev_score = ai_counter._score
+
+_SPEECH_FIXES = {
+    "channel": "chana",
+    "चैनल": "chana",
+    "chenal": "chana",
+    "chanel": "chana",
+    "shop": "saunf",
+    "शॉप": "saunf",
+    "soap": "saunf",
+    "सोप": "saunf",
+    "sauf": "saunf",
+    "souf": "saunf",
+    "saumph": "saunf",
+}
+
+_QTY_NOISE = {
+    "kg", "kilogram", "kilo", "g", "gram", "grams", "gm", "ltr", "liter", "litre",
+    "packet", "pack", "pcs", "piece", "pieces", "bottle", "box",
+}
+
+
+def _speech_norm(value):
+    text = str(value or "")
+    for src, dst in _SPEECH_FIXES.items():
+        text = re.sub(rf"(?<!\w){re.escape(src)}(?!\w)", dst, text, flags=re.I)
+    return _prev_norm(text)
+
+
+def _match_text(value):
+    text = _speech_norm(value)
+    words = []
+    for word in text.split():
+        if word in _QTY_NOISE:
+            continue
+        if word in ai_counter.NUMBER_WORDS:
+            continue
+        try:
+            float(word)
+            continue
+        except ValueError:
+            pass
+        words.append(word)
+    return " ".join(words).strip()
+
+
+def _speech_score(text, candidate):
+    a = _match_text(text)
+    b = _match_text(candidate)
+    if not a or not b:
+        return 0.0
+    # Exact normalized item phrase is safest and should beat generic fuzzy rows.
+    if a == b:
+        return 1.0
+    if b in a or a in b:
+        return 0.98
+    return _prev_score(a, b)
+
+
+ai_counter._norm = _speech_norm
+ai_counter._score = _speech_score
 
 
 DESK_PATCH = r'''
