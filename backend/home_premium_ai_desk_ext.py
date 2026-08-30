@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import backend.native_owner_app_ext as native_owner
+import backend.ai_counter_premium_ui_ext  # noqa: F401
 
-VERSION = "201"
+VERSION = "202"
 _prev_native_html = native_owner.native_owner_html
 
 STYLE = r'''
