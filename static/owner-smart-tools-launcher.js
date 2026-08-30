@@ -19,10 +19,18 @@
 
   function addMenuButtons(list) {
     if (!list) return;
-    if (!list.querySelector('[data-smart-photo]')) list.insertAdjacentHTML('beforeend', buttonMarkup('photo'));
-    if (!list.querySelector('[data-smart-quick]')) list.insertAdjacentHTML('beforeend', buttonMarkup('quick'));
-    if (!list.querySelector('[data-smart-desk]')) list.insertAdjacentHTML('beforeend', buttonMarkup('desk'));
-    if (!list.querySelector('[data-smart-barcode]')) list.insertAdjacentHTML('beforeend', buttonMarkup('barcode'));
+    function ensureOne(kind, selector) {
+      var matches = list.querySelectorAll(selector);
+      for (var index = 1; index < matches.length; index += 1) matches[index].remove();
+      if (!matches.length) list.insertAdjacentHTML('beforeend', buttonMarkup(kind));
+    }
+    // Older hard-fix launchers use data-kirana-*-direct attributes. Treat
+    // those as the same logical menu action so multiple launchers cannot add
+    // duplicate rows while the owner page is re-rendering.
+    ensureOne('photo', '[data-smart-photo],[data-kirana-photo-direct]');
+    ensureOne('quick', '[data-smart-quick],[data-kirana-quick-direct]');
+    ensureOne('desk', '[data-smart-desk],[data-kirana-ai-desk]');
+    ensureOne('barcode', '[data-smart-barcode],[data-kirana-barcode-direct]');
   }
 
   function addTopButton() {
@@ -88,16 +96,16 @@
   }
 
   function smartTarget(event) {
-    return event.target && event.target.closest ? event.target.closest('[data-smart-photo],[data-smart-quick],[data-smart-desk],[data-smart-barcode],#owner-smart-photo-button') : null;
+    return event.target && event.target.closest ? event.target.closest('[data-smart-photo],[data-kirana-photo-direct],[data-smart-quick],[data-kirana-quick-direct],[data-smart-desk],[data-kirana-ai-desk],[data-smart-barcode],[data-kirana-barcode-direct],#owner-smart-photo-button') : null;
   }
 
   document.addEventListener('click', function (event) {
     var target = smartTarget(event);
     if (!target) return;
-    if (target.matches('[data-smart-desk]')) return launchDesk(target, event);
-    if (target.matches('[data-smart-quick],#owner-smart-photo-button')) return go('/owner/quick-bill?v=149', event);
-    if (target.matches('[data-smart-photo]')) return go('/owner/smart-tools?build=149#photo', event);
-    if (target.matches('[data-smart-barcode]')) return go('/owner/smart-tools?build=149#barcode', event);
+    if (target.matches('[data-smart-desk],[data-kirana-ai-desk]')) return launchDesk(target, event);
+    if (target.matches('[data-smart-quick],[data-kirana-quick-direct],#owner-smart-photo-button')) return go('/owner/quick-bill?v=205', event);
+    if (target.matches('[data-smart-photo],[data-kirana-photo-direct]')) return go('/owner/smart-tools?build=205#photo', event);
+    if (target.matches('[data-smart-barcode],[data-kirana-barcode-direct]')) return go('/owner/smart-tools?build=205#barcode', event);
   }, true);
 
   function boot() {

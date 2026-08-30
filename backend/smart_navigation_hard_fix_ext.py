@@ -7,7 +7,7 @@ import backend.owner_final_inline_ext as final_owner
 import backend.stable_owner_app_ext as stable_owner
 
 
-VERSION = "177"
+VERSION = "205"
 native_owner.BUILD = VERSION
 final_owner.BUILD = VERSION
 stable_owner.VERSION = VERSION
@@ -28,13 +28,13 @@ SMART_PATCH = r'''
 <script id="kirana-smart-hard-nav">
 (function(){
   'use strict';
-  if(window.__kiranaSmartHard177)return;
-  window.__kiranaSmartHard177=true;
+  if(window.__kiranaSmartHard205)return;
+  window.__kiranaSmartHard205=true;
 
   var routes={
-    quick:'/owner/quick-bill?direct=177',
-    photo:'/owner/smart-tools?direct=177#photo',
-    barcode:'/owner/smart-tools?direct=177#barcode'
+    quick:'/owner/quick-bill?direct=205',
+    photo:'/owner/smart-tools?direct=205#photo',
+    barcode:'/owner/smart-tools?direct=205#barcode'
   };
 
   function go(kind){
@@ -84,9 +84,14 @@ SMART_PATCH = r'''
   function menu(){
     var container=bestMenuContainer();
     if(!container)return;
-    if(!container.querySelector('[data-kirana-photo-direct]')) container.appendChild(row('photo','📷','Photo to Bill','Bill photo se editable Sale/Purchase draft'));
-    if(!container.querySelector('[data-kirana-quick-direct]')) container.appendChild(row('quick','✍️','Quick Write Bill','Hindi/English note se item + size + saved rate'));
-    if(!container.querySelector('[data-kirana-barcode-direct]')) container.appendChild(row('barcode','▥','Barcode Generator','Item barcode generate aur labels print'));
+    function ensureOne(kind,selector,icon,title,sub){
+      var matches=container.querySelectorAll(selector);
+      for(var i=1;i<matches.length;i++)matches[i].remove();
+      if(!matches.length)container.appendChild(row(kind,icon,title,sub));
+    }
+    ensureOne('photo','[data-smart-photo],[data-kirana-photo-direct]','📷','Photo to Bill','Bill photo se editable Sale/Purchase draft');
+    ensureOne('quick','[data-smart-quick],[data-kirana-quick-direct]','✍️','Quick Write Bill','Hindi/English note se item + size + saved rate');
+    ensureOne('barcode','[data-smart-barcode],[data-kirana-barcode-direct]','▥','Barcode Generator','Item barcode generate aur labels print');
   }
 
   function install(){ fixed(); menu(); }
