@@ -3,7 +3,7 @@ from __future__ import annotations
 import backend.ai_counter_route_order_ext as desk
 import backend.ai_counter_spoken_number_normalize_ext  # noqa: F401
 
-VERSION = "198"
+VERSION = "199"
 _prev_page = desk._desk_page_with_quantity_fix
 
 PATCH_JS = r'''
@@ -17,10 +17,16 @@ function normVariant193(s){
 }
 
 function itemLabel193(x){return normVariant193((x.name||'')+' '+(x.size||''));}
+function looksLikeQtyItemRate199(raw){
+  var t=normVariant193(raw);
+  // "2 kilo kabli chana 140" = qty + item + spoken rate, not product variant 140.
+  return /^(?:\d+(?:\.\d+)?)\s*(?:kg|kgs|kilo|kilogram|किलो|किलोग्राम|g|gm|gram|ग्राम|ltr|liter|litre|लीटर|लिटर|pcs|piece|पीस|packet|pack|पैकेट)\b.+\s\d+(?:\.\d+)?$/i.test(t);
+}
 
 function variantPhrase193(raw){
   var t=(typeof spokenDigits192==='function'?spokenDigits192(raw):String(raw||'')).trim();
   var clean=normVariant193(t);
+  if(looksLikeQtyItemRate199(clean)) return null;
   var m=clean.match(/^(.*?\S)\s+(\d+(?:\.\d+)?)$/);
   if(!m) return null;
   if(/(?:kg|kgs|kilo|किलो|ग्राम|gram|gm|pcs|piece|पीस|packet|पैकेट|ltr|liter|लीटर)\s+\d+(?:\.\d+)?$/i.test(clean)) return null;
@@ -31,11 +37,12 @@ async function handleNamedVariant193(raw){
   if(S.stage!=='items') return false;
   var t=(typeof spokenDigits192==='function'?spokenDigits192(raw):String(raw||'')).trim();
   var clean=normVariant193(t);
+  // Let spoken-rate handler parse qty + item + trailing rate.
+  if(looksLikeQtyItemRate199(clean)) return false;
   var parts=clean.match(/^(.*?\S)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)$/);
   var requestedQty=null, query='';
   if(parts){
     // Example: "Vimal 10 4" => item Vimal, size/variant 10, quantity 4.
-    // A bare final number is quantity; rate is only parsed by explicit rate words in spoken-rate flow.
     query=(parts[1]+' '+parts[2]).trim();
     requestedQty=Number(parts[3]);
   }else{
