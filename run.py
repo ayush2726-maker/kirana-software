@@ -143,6 +143,8 @@ import backend.ai_counter_final_cart_new_item_fix_ext  # noqa: F401
 import backend.ai_counter_named_variant_guard_ext  # noqa: F401
 # Retry transient AI Desk API/network failures without changing the working voice recognizer.
 import backend.ai_counter_network_retry_ext  # noqa: F401
+# Premium mobile home layout with AI Desk promoted to the main dashboard.
+import backend.home_premium_ai_desk_ext  # noqa: F401
 
 # Disabled: these layered owner recovery middlewares duplicated/replaced the
 # stable owner bundle and left Android WebView in a half-loaded state.
