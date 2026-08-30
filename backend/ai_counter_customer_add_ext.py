@@ -9,7 +9,7 @@ import backend.ai_counter_ext as counter
 import backend.ai_counter_route_order_ext as desk
 from backend.app import app, db, now_iso
 
-VERSION = "202"
+VERSION = "203"
 _prev_page = desk._desk_page_with_quantity_fix
 
 
@@ -75,7 +75,7 @@ _fallback = next(
 app.router.routes[_fallback:_fallback] = _matches
 
 STYLE = r'''
-<style id="ai-customer-add-202">
+<style id="ai-customer-add-203">
 .customer-add-btn{width:100%;min-height:58px;border:1px dashed #8fb4ff;border-radius:17px;background:linear-gradient(135deg,#f3f7ff,#f8f4ff);color:#3157c8;font-weight:900;font-size:16px;padding:14px 16px}
 #customerModal .modal-card{max-width:460px}#customerModal .customer-modal-icon{width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,#eaf2ff,#f2ecff);display:grid;place-items:center;font-size:28px;margin-bottom:10px}#customerModal .customer-help{margin:0 0 16px;color:#64748b;font-size:14px}
 </style>
@@ -86,23 +86,30 @@ MODAL = r'''
 '''
 
 SCRIPT = r'''
-<script id="ai-customer-add-script-202">
+<script id="ai-customer-add-script-203">
 (function(){
  'use strict';
- if(window.__aiCustomerAdd202)return;window.__aiCustomerAdd202=true;
+ if(window.__aiCustomerAdd203)return;window.__aiCustomerAdd203=true;
  var lastCustomerSpeech='';
+ function customerSpeech(){
+  var heard=$('heard'),text=lastCustomerSpeech||(heard?heard.textContent:'');
+  return String(text||'').replace(/^(?:you|aap)\s*:\s*/i,'').trim();
+ }
  function openCustomerModal(){
   var m=$('customerModal');if(!m)return;
-  $('newCustomerName').value=String(lastCustomerSpeech||'').replace(/^you:\s*/i,'').trim();
+  $('newCustomerName').value=customerSpeech();
   $('newCustomerPhone').value='';m.classList.remove('hidden');
   setTimeout(function(){$('newCustomerName').focus()},60);
  }
  function closeCustomerModal(){var m=$('customerModal');if(m)m.classList.add('hidden')}
  function ensureAddCustomer(){
-  if(!window.S||S.stage!=='customer')return;
-  var c=$('choices');if(!c||c.querySelector('[data-add-customer-202]'))return;
-  if(!lastCustomerSpeech)return;
-  var b=document.createElement('button');b.type='button';b.className='customer-add-btn';b.setAttribute('data-add-customer-202','1');b.textContent='➕ Naya Customer Add Karein';b.onclick=openCustomerModal;c.appendChild(b);
+  // `S` is declared with top-level `const` in the kiosk page. Such bindings are
+  // globally accessible but are not properties of `window`.
+  if(typeof S==='undefined'||S.stage!=='customer')return;
+  var c=$('choices');if(!c||c.querySelector('[data-add-customer-203]'))return;
+  if(!customerSpeech())return;
+  var b=document.createElement('button');b.type='button';b.className='customer-add-btn';b.setAttribute('data-add-customer-203','1');b.textContent='➕ Naya Customer Add Karein';b.onclick=openCustomerModal;
+  var retry=c.querySelector('.choice-action');c.insertBefore(b,retry||null);
  }
  var baseProcess=processSpeech;
  processSpeech=async function(raw){
@@ -131,7 +138,7 @@ SCRIPT = r'''
 
 def _page() -> str:
     page = _prev_page()
-    if "ai-customer-add-script-202" in page:
+    if "ai-customer-add-script-203" in page:
         return page
     page = page.replace("</head>", STYLE + "</head>", 1)
     page = page.replace("</body>", MODAL + SCRIPT + "</body>", 1)
