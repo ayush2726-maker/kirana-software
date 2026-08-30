@@ -9,7 +9,7 @@ import backend.ai_counter_ext as counter
 import backend.ai_counter_route_order_ext as desk
 from backend.app import app, db, now_iso
 
-VERSION = "203"
+VERSION = "204"
 _prev_page = desk._desk_page_with_quantity_fix
 
 
@@ -75,7 +75,7 @@ _fallback = next(
 app.router.routes[_fallback:_fallback] = _matches
 
 STYLE = r'''
-<style id="ai-customer-add-203">
+<style id="ai-customer-add-204">
 .customer-add-btn{width:100%;min-height:58px;border:1px dashed #8fb4ff;border-radius:17px;background:linear-gradient(135deg,#f3f7ff,#f8f4ff);color:#3157c8;font-weight:900;font-size:16px;padding:14px 16px}
 #customerModal .modal-card{max-width:460px}#customerModal .customer-modal-icon{width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,#eaf2ff,#f2ecff);display:grid;place-items:center;font-size:28px;margin-bottom:10px}#customerModal .customer-help{margin:0 0 16px;color:#64748b;font-size:14px}
 </style>
@@ -86,10 +86,8 @@ MODAL = r'''
 '''
 
 SCRIPT = r'''
-<script id="ai-customer-add-script-203">
-(function(){
- 'use strict';
- if(window.__aiCustomerAdd203)return;window.__aiCustomerAdd203=true;
+/* ai-customer-add-script-204 */
+ window.__aiCustomerAdd204=true;
  var lastCustomerSpeech='';
  function customerSpeech(){
   var heard=$('heard'),text=lastCustomerSpeech||(heard?heard.textContent:'');
@@ -106,9 +104,9 @@ SCRIPT = r'''
   // `S` is declared with top-level `const` in the kiosk page. Such bindings are
   // globally accessible but are not properties of `window`.
   if(typeof S==='undefined'||S.stage!=='customer')return;
-  var c=$('choices');if(!c||c.querySelector('[data-add-customer-203]'))return;
+  var c=$('choices');if(!c||c.querySelector('[data-add-customer-204]'))return;
   if(!customerSpeech())return;
-  var b=document.createElement('button');b.type='button';b.className='customer-add-btn';b.setAttribute('data-add-customer-203','1');b.textContent='➕ Naya Customer Add Karein';b.onclick=openCustomerModal;
+  var b=document.createElement('button');b.type='button';b.className='customer-add-btn';b.setAttribute('data-add-customer-204','1');b.textContent='➕ Naya Customer Add Karein';b.onclick=openCustomerModal;
   var retry=c.querySelector('.choice-action');c.insertBefore(b,retry||null);
  }
  var baseProcess=processSpeech;
@@ -131,17 +129,18 @@ SCRIPT = r'''
   }catch(e){fail(e.message||'Customer add nahi hua.')}finally{btn.disabled=false;btn.textContent=old}
  };
  var c=$('choices');if(c&&window.MutationObserver)new MutationObserver(function(){if(S.stage==='customer')setTimeout(ensureAddCustomer,0)}).observe(c,{childList:true});
-})();
-</script>
 '''
 
 
 def _page() -> str:
     page = _prev_page()
-    if "ai-customer-add-script-203" in page:
+    if "ai-customer-add-script-204" in page:
         return page
     page = page.replace("</head>", STYLE + "</head>", 1)
-    page = page.replace("</body>", MODAL + SCRIPT + "</body>", 1)
+    page = page.replace("<script>\n(function(){", MODAL + "\n<script>\n(function(){", 1)
+    marker = "$('scanBarcode').onclick=openScanner;"
+    if marker in page:
+        page = page.replace(marker, SCRIPT + "\n" + marker, 1)
     return page
 
 
