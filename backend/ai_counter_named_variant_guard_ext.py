@@ -3,7 +3,7 @@ from __future__ import annotations
 import backend.ai_counter_route_order_ext as desk
 import backend.ai_counter_spoken_number_normalize_ext  # noqa: F401
 
-VERSION = "199"
+VERSION = "200"
 _prev_page = desk._desk_page_with_quantity_fix
 
 PATCH_JS = r'''
@@ -19,8 +19,11 @@ function normVariant193(s){
 function itemLabel193(x){return normVariant193((x.name||'')+' '+(x.size||''));}
 function looksLikeQtyItemRate199(raw){
   var t=normVariant193(raw);
-  // "2 kilo kabli chana 140" = qty + item + spoken rate, not product variant 140.
-  return /^(?:\d+(?:\.\d+)?)\s*(?:kg|kgs|kilo|kilogram|किलो|किलोग्राम|g|gm|gram|ग्राम|ltr|liter|litre|लीटर|लिटर|pcs|piece|पीस|packet|pack|पैकेट)\b.+\s\d+(?:\.\d+)?$/i.test(t);
+  // A Unicode-safe separator check is required here. JavaScript \b only treats
+  // ASCII letters/digits/_ as word characters, so it fails after Hindi units
+  // such as "किलो". Example: "2 किलो काबली चना 140" must go to spoken-rate
+  // parsing, while "Vimal 10 4" must remain numbered-variant + quantity.
+  return /^(?:\d+(?:\.\d+)?)\s*(?:kg|kgs|kilo|kilogram|किलो|किलोग्राम|g|gm|gram|ग्राम|ltr|liter|litre|लीटर|लिटर|pcs|piece|पीस|packet|pack|पैकेट)(?=\s|$)\s+.+\s+\d+(?:\.\d+)?$/i.test(t);
 }
 
 function variantPhrase193(raw){
@@ -29,7 +32,7 @@ function variantPhrase193(raw){
   if(looksLikeQtyItemRate199(clean)) return null;
   var m=clean.match(/^(.*?\S)\s+(\d+(?:\.\d+)?)$/);
   if(!m) return null;
-  if(/(?:kg|kgs|kilo|किलो|ग्राम|gram|gm|pcs|piece|पीस|packet|पैकेट|ltr|liter|लीटर)\s+\d+(?:\.\d+)?$/i.test(clean)) return null;
+  if(/(?:kg|kgs|kilo|किलो|ग्राम|gram|gm|pcs|piece|पीस|packet|पैकेट|ltr|liter|लीटर)(?=\s|$)\s+\d+(?:\.\d+)?$/i.test(clean)) return null;
   return {name:(m[1]+' '+m[2]).trim(),number:m[2],spoken:t};
 }
 
